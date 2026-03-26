@@ -780,7 +780,7 @@ with tab5:
             except Exception as e:
                 st.error(f"{t('csv_import_error')}
 
-Detail: {str(e)}")
+Detail: {str(e)}")}")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, and CSV import in Streamlit.")
