@@ -144,6 +144,26 @@ LANGUAGE_PACK = {
         "admin_locked": "管理設定の変更にはパスワードが必要です。",
         "admin_unlocked": "管理ロックを解除しました。",
         "admin_password_error": "パスワードが違います。",
+        "tab_next_year": "来年昇格シミュレーション",
+        "next_year_heading": "来年昇格シミュレーション",
+        "apply_next_step": "昇格前に来年のStepアップを反映する",
+        "next_year_current_step": "来年時点の現在ステップ",
+        "next_year_current_salary": "来年時点の現在給与",
+        "next_year_result": "来年昇格後のGS",
+        "tab_allowance_export": "手当込みエクスポート",
+        "allowance_export_heading": "手当込み賃金テーブル",
+        "allowance_export_text": "固定額の手当を加えた賃金テーブルを表示・エクスポートできます。",
+        "adjustment_allowance_export": "調整手当（固定額）",
+        "university_allowance_export": "大卒手当（固定額）",
+        "other_allowance_export": "その他手当（固定額）",
+        "include_university_allowance": "大卒手当を含める",
+        "include_adjustment_allowance": "調整手当を含める",
+        "include_other_allowance": "その他手当を含める",
+        "base_table": "基本給テーブル",
+        "allowance_total": "手当合計",
+        "total_pay": "合計支給額",
+        "export_with_allowances_csv": "手当込みCSVをダウンロード",
+        "export_with_allowances_excel": "手当込みExcelをダウンロード",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
@@ -240,6 +260,26 @@ LANGUAGE_PACK = {
         "admin_locked": "A password is required to change admin settings.",
         "admin_unlocked": "Admin is unlocked.",
         "admin_password_error": "Incorrect password.",
+        "tab_next_year": "Next-Year Promotion",
+        "next_year_heading": "Next-Year Promotion Simulation",
+        "apply_next_step": "Apply next year's step-up before promotion",
+        "next_year_current_step": "Next-year current step",
+        "next_year_current_salary": "Next-year current salary",
+        "next_year_result": "Next-year promoted GS",
+        "tab_allowance_export": "Allowance Export",
+        "allowance_export_heading": "Allowance-Included Wage Table",
+        "allowance_export_text": "You can view and export a wage table with fixed allowances added.",
+        "adjustment_allowance_export": "Adjustment allowance (fixed)",
+        "university_allowance_export": "University allowance (fixed)",
+        "other_allowance_export": "Other allowance (fixed)",
+        "include_university_allowance": "Include university allowance",
+        "include_adjustment_allowance": "Include adjustment allowance",
+        "include_other_allowance": "Include other allowance",
+        "base_table": "Base pay table",
+        "allowance_total": "Allowance total",
+        "total_pay": "Total pay",
+        "export_with_allowances_csv": "Download allowance CSV",
+        "export_with_allowances_excel": "Download allowance Excel",},{
     },
 }
 
@@ -489,6 +529,54 @@ def find_promotion_result(
     }
 
 
+def find_next_year_promotion_result(
+    df: pd.DataFrame,
+    params: Dict[str, Dict[str, float]],
+    current_grade: str,
+    current_step: int,
+    apply_next_step: bool = True,
+) -> Optional[Dict[str, float]]:
+    simulated_step = min(current_step + 1, max(STEPS)) if apply_next_step else current_step
+    base_result = find_promotion_result(df, params, current_grade, simulated_step)
+    if base_result is None:
+        return None
+    return {
+        "next_year_current_step": simulated_step,
+        "next_year_current_salary": base_result["current_salary"],
+        "minimum_required": base_result["minimum_required"],
+        "target_grade": base_result["target_grade"],
+        "target_step": base_result["target_step"],
+        "target_salary": base_result["target_salary"],
+    }
+
+
+def build_allowance_export_table(
+    df: pd.DataFrame,
+    include_adjustment: bool,
+    adjustment_amount: float,
+    include_university: bool,
+    university_amount: float,
+    include_other: bool,
+    other_amount: float,
+) -> pd.DataFrame:
+    out = df.copy()
+    allowance_total = 0.0
+    if include_adjustment:
+        allowance_total += adjustment_amount
+    if include_university:
+        allowance_total += university_amount
+    if include_other:
+        allowance_total += other_amount
+
+    for g in GRADES:
+        out[g] = pd.to_numeric(out[g], errors="coerce")
+
+    out["Allowance Total"] = allowance_total
+    for g in GRADES:
+        out[f"{g} Total"] = out[g] + allowance_total
+    return out
+
+
 def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for g in GRADES:
@@ -623,11 +711,13 @@ with m2:
 with m3:
     st.metric("GS Patterns", len(GRADES) * len(STEPS))
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     t("tab_overview"),
     t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
+    t("tab_next_year"),
+    t("tab_allowance_export"),
     t("tab_admin"),
 ])
 
@@ -808,9 +898,118 @@ with tab4:
             st.dataframe(sim_df, use_container_width=True, hide_index=True)
 
 # =========================================================
-# Tab 5: Admin
+# Tab 5: Next-Year Promotion
 # =========================================================
 with tab5:
+    st.subheader(t("next_year_heading"))
+
+    ny1, ny2, ny3 = st.columns(3)
+    with ny1:
+        next_year_grade = st.selectbox(f"{t('current_grade')} ", GRADES[:-1], index=0, key="next_year_grade")
+    with ny2:
+        next_year_step = st.selectbox(f"{t('current_step')} ", STEPS, index=0, key="next_year_step")
+    with ny3:
+        apply_next_step_flag = st.checkbox(t("apply_next_step"), value=True)
+
+    if st.button(t("simulate") + " / Next Year", use_container_width=True):
+        next_year_result = find_next_year_promotion_result(
+            st.session_state.wage_df,
+            st.session_state.params,
+            next_year_grade,
+            int(next_year_step),
+            apply_next_step=apply_next_step_flag,
+        )
+
+        if next_year_result is None:
+            st.warning(t("no_next_grade"))
+        else:
+            nyr1, nyr2, nyr3 = st.columns(3)
+            with nyr1:
+                st.metric(t("next_year_current_step"), f"S{next_year_result['next_year_current_step']}")
+            with nyr2:
+                st.metric(t("next_year_current_salary"), format_money(next_year_result["next_year_current_salary"]))
+            with nyr3:
+                st.metric(t("next_year_result"), f"{next_year_result['target_grade']}-S{next_year_result['target_step']}")
+
+            st.graphviz_chart(
+                promotion_diagram(
+                    next_year_grade,
+                    int(next_year_result["next_year_current_step"]),
+                    next_year_result["target_grade"],
+                    int(next_year_result["target_step"]),
+                )
+            )
+
+            next_year_df = pd.DataFrame([
+                {
+                    t("current_grade"): next_year_grade,
+                    t("next_year_current_step"): int(next_year_result["next_year_current_step"]),
+                    t("next_year_current_salary"): format_money(next_year_result["next_year_current_salary"]),
+                    t("min_required"): format_money(next_year_result["minimum_required"]),
+                    t("promoted_grade"): next_year_result["target_grade"],
+                    t("promoted_step"): int(next_year_result["target_step"]),
+                    t("promoted_salary"): format_money(next_year_result["target_salary"]),
+                }
+            ])
+            st.dataframe(next_year_df, use_container_width=True, hide_index=True)
+
+# =========================================================
+# Tab 6: Allowance Export
+# =========================================================
+with tab6:
+    st.subheader(t("allowance_export_heading"))
+    st.write(t("allowance_export_text"))
+
+    ex1, ex2, ex3 = st.columns(3)
+    with ex1:
+        include_adjustment = st.checkbox(t("include_adjustment_allowance"), value=True)
+        adjustment_amount = st.number_input(t("adjustment_allowance_export"), min_value=0.0, value=0.0, step=100.0)
+    with ex2:
+        include_university = st.checkbox(t("include_university_allowance"), value=False)
+        university_amount = st.number_input(t("university_allowance_export"), min_value=0.0, value=0.0, step=100.0)
+    with ex3:
+        include_other = st.checkbox(t("include_other_allowance"), value=False)
+        other_amount = st.number_input(t("other_allowance_export"), min_value=0.0, value=0.0, step=100.0)
+
+    allowance_export_df = build_allowance_export_table(
+        st.session_state.wage_df,
+        include_adjustment=include_adjustment,
+        adjustment_amount=adjustment_amount,
+        include_university=include_university,
+        university_amount=university_amount,
+        include_other=include_other,
+        other_amount=other_amount,
+    )
+    st.dataframe(allowance_export_df, use_container_width=True, hide_index=True)
+
+    allowance_csv = allowance_export_df.to_csv(index=False).encode("utf-8-sig")
+    allowance_excel = make_excel_file(allowance_export_df)
+
+    exd1, exd2 = st.columns(2)
+    with exd1:
+        st.download_button(
+            t("export_with_allowances_csv"),
+            data=allowance_csv,
+            file_name="wage_table_with_allowances.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with exd2:
+        if allowance_excel is not None:
+            st.download_button(
+                t("export_with_allowances_excel"),
+                data=allowance_excel,
+                file_name="wage_table_with_allowances.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        else:
+            st.info(t("excel_unavailable"))
+
+# =========================================================
+# Tab 7: Admin
+# =========================================================
+with tab7:
     st.subheader(t("admin_heading"))
     st.write(t("admin_text"))
     st.warning(t("warning_rebuild"))
