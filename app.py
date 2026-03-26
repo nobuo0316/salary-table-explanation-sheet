@@ -1325,15 +1325,17 @@ with tab8:
                 except Exception:
                     st.error(t("csv_import_error"))
 
-            if st.button(t("csv_apply"), use_container_width=True):
+if st.button(t("csv_apply"), use_container_width=True):
     if uploaded_csv is None:
         st.warning(t("csv_import_empty"))
     else:
         try:
             uploaded_csv.seek(0)
             imported_df = pd.read_csv(uploaded_csv)
+
             new_params = validate_imported_settings_csv(imported_df)
             save_and_rebuild(new_params)
+
             st.success(t("csv_import_success"))
             st.rerun()
 
