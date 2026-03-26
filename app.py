@@ -1,7 +1,10 @@
-import streamlit as st
-import pandas as pd
+import json
 from io import BytesIO
 from typing import Dict, List, Optional
+from urllib import error, parse, request
+
+import pandas as pd
+import streamlit as st
 
 # Optional Excel engines
 try:
@@ -83,11 +86,9 @@ LANGUAGE_PACK = {
         "diagram_help1": "下の図では、横方向が Grade、縦方向が Step です。社員は必ずどこか1つの GS に所属します。",
         "diagram_help2": "AP は同じグレード内での毎年の昇給、PP は次グレードへ上がるときの追加昇給です。",
         "diagram_help3": "昇格時は、最低必要額を満たす次グレードの最も近い Step に移動します。",
-        "simple_example": "初心者向けの例",
         "simple_example_text": "例：G5A-S4 の社員が昇格する場合、まず『現在給与 + AP + PP』で最低必要額を出し、その金額以上になる G4 の最初の Step を探します。",
         "wage_heading": "賃金テーブル",
         "wage_caption": "値は直接編集できます。説明会で見せる用にも、そのまま管理用にも使えます。",
-        "show_formatted": "表示用フォーマット列も見る",
         "download_csv": "CSVをダウンロード",
         "download_excel": "Excelをダウンロード",
         "sim_heading": "昇格シミュレーション",
@@ -115,8 +116,8 @@ LANGUAGE_PACK = {
         "rebuild": "設定値でテーブル再生成",
         "reset": "初期値に戻す",
         "warning_rebuild": "再生成すると、現在の手動編集内容は上書きされます。",
-        "success_rebuild": "テーブルを再生成しました。",
-        "success_reset": "初期値に戻しました。",
+        "success_rebuild": "テーブルを再生成して保存しました。",
+        "success_reset": "初期値に戻して保存しました。",
         "download_note": "必要に応じてこのままCSV / Excelで配布できます。",
         "currency_preview": "表示例",
         "excel_unavailable": "この環境ではExcel出力が使えません。CSVを使うか、requirements.txt に openpyxl または xlsxwriter を追加してください。",
@@ -125,16 +126,24 @@ LANGUAGE_PACK = {
         "table_mode_with_label": "GSラベル付き",
         "promotion_flow": "昇格の流れ",
         "step_search_result": "該当Stepの探索結果",
-        "legend": "凡例",
         "csv_import_heading": "設定CSVインポート",
-        "csv_import_text": "この画面の設定値（Step1基準額、AP、PP）をCSVで一括更新できます。反映後、賃金テーブルも自動で再生成されます。",
+        "csv_import_text": "この画面の設定値（Step1基準額、AP、PP）をCSVで一括更新できます。反映後、賃金テーブルも自動で再生成され、Supabase に保存されます。",
         "csv_upload": "設定CSVファイルをアップロード",
         "csv_apply": "CSVを設定に反映",
         "csv_template_download": "設定CSVテンプレートをダウンロード",
-        "csv_import_success": "CSVから設定値を更新し、賃金テーブルを再生成しました。",
+        "csv_import_success": "CSVから設定値を更新し、賃金テーブルを再生成して保存しました。",
         "csv_import_error": "CSVの形式が正しくありません。Grade, Base, AP, PP 列が必要で、G6, G5B, G5A, G4, G3, G2 の6行が必要です。",
         "csv_import_empty": "CSVファイルを選択してください。",
         "csv_preview_heading": "CSVプレビュー",
+        "supabase_status_ok": "Supabase接続: ON",
+        "supabase_status_off": "Supabase接続: OFF（ローカル初期値を使用）",
+        "supabase_save_error": "Supabase保存に失敗しました。",
+        "supabase_load_error": "Supabase読込に失敗したため、初期値を使用しています。",
+        "admin_password": "管理用パスワード",
+        "admin_unlock": "管理ロック解除",
+        "admin_locked": "管理設定の変更にはパスワードが必要です。",
+        "admin_unlocked": "管理ロックを解除しました。",
+        "admin_password_error": "パスワードが違います。",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
@@ -173,11 +182,9 @@ LANGUAGE_PACK = {
         "diagram_help1": "In the chart below, Grade runs horizontally and Step runs vertically. Every employee always belongs to one GS position.",
         "diagram_help2": "AP means annual raise within the same grade. PP means the additional raise given at promotion to the next grade.",
         "diagram_help3": "At promotion, the employee moves to the closest step in the next grade that meets the minimum required amount.",
-        "simple_example": "Simple Example",
         "simple_example_text": "Example: when an employee at G5A-S4 is promoted, first calculate Current Salary + AP + PP, then find the first Step in G4 that is equal to or higher than that threshold.",
         "wage_heading": "Wage Table",
         "wage_caption": "You can edit the values directly. It can be used both for presentation and management.",
-        "show_formatted": "Show formatted display columns",
         "download_csv": "Download CSV",
         "download_excel": "Download Excel",
         "sim_heading": "Promotion Simulation",
@@ -205,8 +212,8 @@ LANGUAGE_PACK = {
         "rebuild": "Rebuild table from settings",
         "reset": "Reset to defaults",
         "warning_rebuild": "Rebuilding will overwrite current manual edits.",
-        "success_rebuild": "The wage table has been rebuilt.",
-        "success_reset": "The defaults have been restored.",
+        "success_rebuild": "The wage table was rebuilt and saved.",
+        "success_reset": "Defaults were restored and saved.",
         "download_note": "You can distribute this as CSV or Excel as needed.",
         "currency_preview": "Preview",
         "excel_unavailable": "Excel export is unavailable in this environment. Please use CSV export or add openpyxl / xlsxwriter to requirements.txt.",
@@ -215,18 +222,27 @@ LANGUAGE_PACK = {
         "table_mode_with_label": "With GS Labels",
         "promotion_flow": "Promotion Flow",
         "step_search_result": "Step Search Result",
-        "legend": "Legend",
         "csv_import_heading": "Settings CSV Import",
-        "csv_import_text": "You can bulk update the settings shown on this screen (Base at Step 1, AP, and PP) by CSV. After import, the wage table will be regenerated automatically.",
+        "csv_import_text": "You can bulk update the settings shown on this screen (Base at Step 1, AP, and PP) by CSV. After import, the wage table is regenerated and saved to Supabase.",
         "csv_upload": "Upload settings CSV file",
         "csv_apply": "Apply CSV to settings",
         "csv_template_download": "Download settings CSV template",
-        "csv_import_success": "The settings were updated from CSV and the wage table was regenerated.",
+        "csv_import_success": "The settings were updated from CSV, the wage table was regenerated, and the changes were saved.",
         "csv_import_error": "The CSV format is invalid. The file must contain Grade, Base, AP, and PP columns, with 6 rows for G6, G5B, G5A, G4, G3, and G2.",
         "csv_import_empty": "Please choose a CSV file first.",
         "csv_preview_heading": "CSV Preview",
+        "supabase_status_ok": "Supabase connection: ON",
+        "supabase_status_off": "Supabase connection: OFF (using local defaults)",
+        "supabase_save_error": "Failed to save to Supabase.",
+        "supabase_load_error": "Failed to load from Supabase. Using default values.",
+        "admin_password": "Admin password",
+        "admin_unlock": "Unlock admin",
+        "admin_locked": "A password is required to change admin settings.",
+        "admin_unlocked": "Admin is unlocked.",
+        "admin_password_error": "Incorrect password.",
     },
 }
+
 
 # =========================================================
 # Helpers
@@ -286,35 +302,154 @@ def build_settings_csv_template() -> pd.DataFrame:
 def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
     required_cols = ["Grade", "Base", "AP", "PP"]
 
-    # Check columns
     if list(df.columns) != required_cols:
         raise ValueError(f"Columns must be exactly: {required_cols}")
-
-    validated = df.copy()
-
-    # Check row count
-    if len(validated) != len(GRADES):
-        raise ValueError(f"Row count must be {len(GRADES)} (G6→G2)")
-
-    # Check grade order
-    grade_list = validated["Grade"].tolist()
-    if grade_list != GRADES:
+    if len(df) != len(GRADES):
+        raise ValueError(f"Row count must be {len(GRADES)}")
+    if df["Grade"].tolist() != GRADES:
         raise ValueError(f"Grade order must be: {GRADES}")
 
     new_params: Dict[str, Dict[str, float]] = {}
-
-    for i, row in validated.iterrows():
+    for i, row in df.iterrows():
         try:
             grade = row["Grade"]
             base = float(row["Base"])
             ap = float(row["AP"])
             pp = float(row["PP"])
         except Exception:
-            raise ValueError(f"Row {i+1}: Base/AP/PP must be numeric")
-
+            raise ValueError(f"Row {i + 1}: Base/AP/PP must be numeric")
         new_params[grade] = {"base": base, "ap": ap, "pp": pp}
-
     return new_params
+
+
+def params_to_rows(params: Dict[str, Dict[str, float]]) -> List[Dict[str, float]]:
+    rows = []
+    for grade in GRADES:
+        rows.append({
+            "grade": grade,
+            "base": float(params[grade]["base"]),
+            "ap": float(params[grade]["ap"]),
+            "pp": float(params[grade]["pp"]),
+        })
+    return rows
+
+
+def rows_to_params(rows: List[Dict[str, float]]) -> Dict[str, Dict[str, float]]:
+    rows_by_grade = {row["grade"]: row for row in rows}
+    params: Dict[str, Dict[str, float]] = {}
+    for grade in GRADES:
+        row = rows_by_grade[grade]
+        params[grade] = {
+            "base": float(row["base"]),
+            "ap": float(row["ap"]),
+            "pp": float(row["pp"]),
+        }
+    return params
+
+
+def get_supabase_config() -> Optional[Dict[str, str]]:
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        service_role_key = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
+        table = st.secrets.get("SUPABASE_TABLE", "wage_settings")
+        return {
+            "url": url.rstrip("/"),
+            "key": service_role_key,
+            "table": table,
+        }
+    except Exception:
+        return None
+
+
+def supabase_request(
+    method: str,
+    path: str,
+    body: Optional[object] = None,
+    query: Optional[Dict[str, str]] = None,
+):
+    config = get_supabase_config()
+    if config is None:
+        raise RuntimeError("Supabase is not configured")
+
+    url = f"{config['url']}/rest/v1/{path}"
+    if query:
+        url = f"{url}?{parse.urlencode(query)}"
+
+    headers = {
+        "apikey": config["key"],
+        "Authorization": f"Bearer {config['key']}",
+        "Content-Type": "application/json",
+    }
+
+    if method in ("POST", "PATCH"):
+        headers["Prefer"] = "return=representation"
+    if method == "POST":
+        headers["Prefer"] = "resolution=merge-duplicates,return=representation"
+
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+
+    req = request.Request(url=url, data=data, headers=headers, method=method)
+    with request.urlopen(req, timeout=20) as response:
+        text = response.read().decode("utf-8")
+        return json.loads(text) if text else None
+
+
+def load_settings_from_supabase() -> Dict[str, Dict[str, float]]:
+    config = get_supabase_config()
+    if config is None:
+        return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+
+    try:
+        result = supabase_request(
+            method="GET",
+            path=config["table"],
+            query={
+                "select": "grade,base,ap,pp",
+                "order": "grade.asc",
+            },
+        )
+        if not result:
+            return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+
+        grades_found = [row["grade"] for row in result]
+        if sorted(grades_found) != sorted(GRADES):
+            return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+
+        return rows_to_params(result)
+    except Exception:
+        return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+
+
+def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
+    config = get_supabase_config()
+    if config is None:
+        return
+
+    rows = params_to_rows(params)
+    try:
+        supabase_request(
+            method="POST",
+            path=config["table"],
+            body=rows,
+            query={"on_conflict": "grade"},
+        )
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(detail) from exc
+    except Exception as exc:
+        raise RuntimeError(str(exc)) from exc
+
+
+def admin_auth_enabled() -> bool:
+    return "ADMIN_PASSWORD" in st.secrets and bool(st.secrets["ADMIN_PASSWORD"])
+
+
+def is_admin_unlocked() -> bool:
+    if not admin_auth_enabled():
+        return True
+    return st.session_state.get("admin_unlocked", False)
 
 
 def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
@@ -376,7 +511,7 @@ def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
     lines = []
     lines.append("digraph G {")
     lines.append('rankdir=LR;')
-    lines.append('node [shape=box, style="rounded,filled", fillcolor="white"];')
+    lines.append('node [shape="box", style="rounded,filled", fillcolor="white"];')
     for g in GRADES:
         lines.append(f'subgraph cluster_{g} {{ label="{g}"; style="rounded";')
         for s in [1, 2, 3, 4, 5]:
@@ -395,7 +530,7 @@ def raise_diagram() -> str:
     return """
     digraph G {
       rankdir=LR;
-      node [shape=box, style="rounded,filled", fillcolor="white"];
+      node [shape="box", style="rounded,filled", fillcolor="white"];
       A [label="Current Salary\n現在給与"];
       B [label="+ AP\n毎年昇給"];
       C [label="+ PP\n昇格昇給"];
@@ -410,7 +545,7 @@ def promotion_diagram(current_grade: str, current_step: int, next_grade: str, ta
     return f"""
     digraph G {{
       rankdir=LR;
-      node [shape=box, style="rounded,filled", fillcolor="white"];
+      node [shape="box", style="rounded,filled", fillcolor="white"];
       A [label="{current_grade}-S{current_step}\nCurrent GS", fillcolor="lightblue"];
       B [label="AP + PP\nadded"];
       C [label="Search next grade\n{next_grade}"];
@@ -418,6 +553,12 @@ def promotion_diagram(current_grade: str, current_step: int, next_grade: str, ta
       A -> B -> C -> D;
     }}
     """
+
+
+def save_and_rebuild(params: Dict[str, Dict[str, float]]) -> None:
+    st.session_state.params = params
+    st.session_state.wage_df = build_wage_table(params)
+    save_settings_to_supabase(params)
 
 
 # =========================================================
@@ -429,8 +570,10 @@ if "currency_symbol" not in st.session_state:
     st.session_state.currency_symbol = "₱"
 if "decimals" not in st.session_state:
     st.session_state.decimals = 0
+if "admin_unlocked" not in st.session_state:
+    st.session_state.admin_unlocked = False
 if "params" not in st.session_state:
-    st.session_state.params = {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+    st.session_state.params = load_settings_from_supabase()
 if "wage_df" not in st.session_state:
     st.session_state.wage_df = build_wage_table(st.session_state.params)
 
@@ -453,6 +596,11 @@ st.session_state.decimals = st.sidebar.selectbox(
     [0, 1, 2],
     index=[0, 1, 2].index(st.session_state.decimals),
 )
+
+if get_supabase_config() is not None:
+    st.sidebar.success(t("supabase_status_ok"))
+else:
+    st.sidebar.info(t("supabase_status_off"))
 
 st.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
 st.sidebar.markdown("---")
@@ -521,20 +669,10 @@ with tab2:
     st.subheader(t("diagram_heading3"))
     st.write(t("diagram_help3"))
 
-    sample_result = find_promotion_result(
-        st.session_state.wage_df,
-        st.session_state.params,
-        "G5A",
-        4,
-    )
+    sample_result = find_promotion_result(st.session_state.wage_df, st.session_state.params, "G5A", 4)
     if sample_result:
         st.graphviz_chart(
-            promotion_diagram(
-                "G5A",
-                4,
-                sample_result["target_grade"],
-                int(sample_result["target_step"]),
-            )
+            promotion_diagram("G5A", 4, sample_result["target_grade"], int(sample_result["target_step"]))
         )
 
     st.info(t("simple_example_text"))
@@ -624,12 +762,7 @@ with tab4:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
 
     if st.button(t("simulate"), use_container_width=True):
-        result = find_promotion_result(
-            st.session_state.wage_df,
-            st.session_state.params,
-            current_grade,
-            int(current_step),
-        )
+        result = find_promotion_result(st.session_state.wage_df, st.session_state.params, current_grade, int(current_step))
 
         if result is None:
             st.warning(t("no_next_grade"))
@@ -650,12 +783,7 @@ with tab4:
 
             st.subheader(t("promotion_flow"))
             st.graphviz_chart(
-                promotion_diagram(
-                    current_grade,
-                    int(current_step),
-                    result["target_grade"],
-                    int(result["target_step"]),
-                )
+                promotion_diagram(current_grade, int(current_step), result["target_grade"], int(result["target_step"]))
             )
 
             search_df = st.session_state.wage_df[["Step", result["target_grade"]]].copy()
@@ -687,98 +815,103 @@ with tab5:
     st.write(t("admin_text"))
     st.warning(t("warning_rebuild"))
 
-    input_cols = st.columns(len(GRADES))
-    tmp_params = {}
+    if admin_auth_enabled() and not is_admin_unlocked():
+        st.info(t("admin_locked"))
+        admin_password_input = st.text_input(t("admin_password"), type="password")
+        if st.button(t("admin_unlock"), use_container_width=True):
+            if admin_password_input == st.secrets["ADMIN_PASSWORD"]:
+                st.session_state.admin_unlocked = True
+                st.success(t("admin_unlocked"))
+                st.rerun()
+            else:
+                st.error(t("admin_password_error"))
+    else:
+        input_cols = st.columns(len(GRADES))
+        tmp_params = {}
 
-    for idx, g in enumerate(GRADES):
-        with input_cols[idx]:
-            st.markdown(f"**{g}**")
-            st.caption(grade_label(g))
-            base = st.number_input(
-                f"{g} - {t('base_salary')}",
-                min_value=0.0,
-                value=float(st.session_state.params[g]["base"]),
-                step=100.0,
-                key=f"base_{g}",
-            )
-            ap = st.number_input(
-                f"{g} - {t('ap')}",
-                min_value=0.0,
-                value=float(st.session_state.params[g]["ap"]),
-                step=50.0,
-                key=f"ap_{g}",
-            )
-            pp = st.number_input(
-                f"{g} - {t('pp')}",
-                min_value=0.0,
-                value=float(st.session_state.params[g]["pp"]),
-                step=50.0,
-                key=f"pp_{g}",
-            )
-            tmp_params[g] = {"base": base, "ap": ap, "pp": pp}
+        for idx, g in enumerate(GRADES):
+            with input_cols[idx]:
+                st.markdown(f"**{g}**")
+                st.caption(grade_label(g))
+                base = st.number_input(
+                    f"{g} - {t('base_salary')}",
+                    min_value=0.0,
+                    value=float(st.session_state.params[g]["base"]),
+                    step=100.0,
+                    key=f"base_{g}",
+                )
+                ap = st.number_input(
+                    f"{g} - {t('ap')}",
+                    min_value=0.0,
+                    value=float(st.session_state.params[g]["ap"]),
+                    step=50.0,
+                    key=f"ap_{g}",
+                )
+                pp = st.number_input(
+                    f"{g} - {t('pp')}",
+                    min_value=0.0,
+                    value=float(st.session_state.params[g]["pp"]),
+                    step=50.0,
+                    key=f"pp_{g}",
+                )
+                tmp_params[g] = {"base": base, "ap": ap, "pp": pp}
 
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button(t("rebuild"), use_container_width=True):
-            st.session_state.params = tmp_params
-            st.session_state.wage_df = build_wage_table(st.session_state.params)
-            st.success(t("success_rebuild"))
-    with b2:
-        if st.button(t("reset"), use_container_width=True):
-            st.session_state.params = {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
-            st.session_state.wage_df = build_wage_table(st.session_state.params)
-            st.success(t("success_reset"))
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button(t("rebuild"), use_container_width=True):
+                try:
+                    save_and_rebuild(tmp_params)
+                    st.success(t("success_rebuild"))
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"{t('supabase_save_error')}\n\nDetail: {str(e)}")
+        with b2:
+            if st.button(t("reset"), use_container_width=True):
+                try:
+                    reset_params = {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
+                    save_and_rebuild(reset_params)
+                    st.success(t("success_reset"))
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"{t('supabase_save_error')}\n\nDetail: {str(e)}")
 
-    st.markdown("---")
-    st.subheader(t("csv_import_heading"))
-    st.write(t("csv_import_text"))
+        st.markdown("---")
+        st.subheader(t("csv_import_heading"))
+        st.write(t("csv_import_text"))
 
-    template_df = build_settings_csv_template()
-    template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        t("csv_template_download"),
-        data=template_csv,
-        file_name="wage_table_settings_template.csv",
-        mime="text/csv",
-        use_container_width=False,
-    )
+        template_df = build_settings_csv_template()
+        template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            t("csv_template_download"),
+            data=template_csv,
+            file_name="wage_table_settings_template.csv",
+            mime="text/csv",
+        )
 
-    uploaded_csv = st.file_uploader(
-        t("csv_upload"),
-        type=["csv"],
-        key="settings_csv_upload",
-    )
+        uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
 
-    if uploaded_csv is not None:
-        try:
-            uploaded_csv.seek(0)
-            preview_df = pd.read_csv(uploaded_csv)
-            st.markdown(f"**{t('csv_preview_heading')}**")
-            st.dataframe(preview_df, use_container_width=True, hide_index=True)
-        except Exception:
-            st.error(t("csv_import_error"))
-
-    if st.button(t("csv_apply"), use_container_width=True):
-        if uploaded_csv is None:
-            st.warning(t("csv_import_empty"))
-        else:
+        if uploaded_csv is not None:
             try:
                 uploaded_csv.seek(0)
-                imported_df = pd.read_csv(uploaded_csv)
+                preview_df = pd.read_csv(uploaded_csv)
+                st.markdown(f"**{t('csv_preview_heading')}**")
+                st.dataframe(preview_df, use_container_width=True, hide_index=True)
+            except Exception:
+                st.error(t("csv_import_error"))
 
-                new_params = validate_imported_settings_csv(imported_df)
-
-                # Apply
-                st.session_state.params = new_params
-                st.session_state.wage_df = build_wage_table(new_params)
-
-                st.success(t("csv_import_success"))
-
-                # Force UI refresh (important)
-                st.rerun()
-
-            except Exception as e:
-                st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
+        if st.button(t("csv_apply"), use_container_width=True):
+            if uploaded_csv is None:
+                st.warning(t("csv_import_empty"))
+            else:
+                try:
+                    uploaded_csv.seek(0)
+                    imported_df = pd.read_csv(uploaded_csv)
+                    new_params = validate_imported_settings_csv(imported_df)
+                    save_and_rebuild(new_params)
+                    st.success(t("csv_import_success"))
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
 
 st.markdown("---")
-st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, and CSV import in Streamlit.")
+st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, CSV import, and Supabase persistence in Streamlit.")
