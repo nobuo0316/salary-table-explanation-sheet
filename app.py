@@ -48,16 +48,35 @@ DEFAULT_PARAMS = {
     "G2": {"base": 52000.0, "ap": 1200.0, "pp": 0.0},
 }
 
+DEFAULT_EMPLOYEE_COLUMNS = [
+    "Employee ID",
+    "Name",
+    "Grade",
+    "Step",
+    "University Graduate",
+    "Adjustment Allowance",
+    "Other Allowance",
+    "Active",
+]
+
 LANGUAGE_PACK = {
     "日本語": {
         "title": "賃金テーブル管理・説明ページ",
         "subtitle": "初心者向けの図解、説明、テーブル編集、昇格シミュレーションを1つにまとめた完成版です。",
+        "login_title": "ログイン",
+        "login_id": "ID",
+        "login_password": "パスワード",
+        "login_button": "ログイン",
+        "logout_button": "ログアウト",
+        "login_error": "IDまたはパスワードが違います。",
+        "logged_in_as": "ログイン中",
         "tab_overview": "制度説明",
         "tab_diagram": "図で理解",
         "tab_table": "賃金テーブル",
         "tab_sim": "昇格シミュレーション",
         "tab_next_year": "来年昇格シミュレーション",
         "tab_allowance_export": "手当込みエクスポート",
+        "tab_employee": "従業員名簿",
         "tab_admin": "管理設定",
         "sidebar_lang": "表示言語",
         "sidebar_currency": "通貨記号",
@@ -123,11 +142,34 @@ LANGUAGE_PACK = {
         "include_university_allowance": "大卒手当を含める",
         "include_adjustment_allowance": "調整手当を含める",
         "include_other_allowance": "その他手当を含める",
-        "base_table": "基本給テーブル",
-        "allowance_total": "手当合計",
-        "total_pay": "合計支給額",
         "export_with_allowances_csv": "手当込みCSVをダウンロード",
         "export_with_allowances_excel": "手当込みExcelをダウンロード",
+        "employee_heading": "従業員名簿",
+        "employee_text": "従業員名簿をCSVで読み込み、各従業員の基本給・手当・合計支給額・来年昇格後GSを一覧化できます。",
+        "employee_template_download": "従業員名簿テンプレートをダウンロード",
+        "employee_upload": "従業員名簿CSVをアップロード",
+        "employee_apply": "従業員名簿を反映",
+        "employee_preview": "従業員名簿プレビュー",
+        "employee_import_success": "従業員名簿を反映しました。",
+        "employee_import_empty": "従業員名簿CSVを選択してください。",
+        "employee_import_error": "従業員名簿CSVの形式が正しくありません。",
+        "employee_export_csv": "従業員給与一覧CSVをダウンロード",
+        "employee_export_excel": "従業員給与一覧Excelをダウンロード",
+        "employee_id": "社員ID",
+        "employee_name": "氏名",
+        "employee_grade": "Grade",
+        "employee_step": "Step",
+        "employee_basic_pay": "基本給",
+        "employee_university_flag": "大卒対象",
+        "employee_adjustment_allowance": "調整手当",
+        "employee_other_allowance": "その他手当",
+        "employee_university_allowance": "大卒手当",
+        "employee_total_allowance": "手当合計",
+        "employee_total_pay": "合計支給額",
+        "employee_next_year_gs": "来年昇格後GS",
+        "employee_next_year_basic_pay": "来年昇格後基本給",
+        "active_only": "在籍者のみ表示",
+        "default_university_allowance": "名簿計算用の大卒手当（固定額）",
         "admin_heading": "管理設定",
         "admin_text": "ここで初期テーブルの自動生成ルールを変更できます。実際の賃金額が決まっている場合は、下のテーブルを直接編集してください。",
         "base_salary": "Step1基準額",
@@ -158,7 +200,6 @@ LANGUAGE_PACK = {
         "supabase_status_ok": "Supabase接続: ON",
         "supabase_status_off": "Supabase接続: OFF（ローカル初期値を使用）",
         "supabase_save_error": "Supabase保存に失敗しました。",
-        "supabase_load_error": "Supabase読込に失敗したため、初期値を使用しています。",
         "admin_password": "管理用パスワード",
         "admin_unlock": "管理ロック解除",
         "admin_locked": "管理設定の変更にはパスワードが必要です。",
@@ -167,13 +208,21 @@ LANGUAGE_PACK = {
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
-        "subtitle": "A complete beginner-friendly Streamlit app with visual explanation, table editing, and promotion simulation.",
+        "subtitle": "A complete beginner-friendly Streamlit app with visual explanation, table editing, promotion simulation, and employee roster support.",
+        "login_title": "Login",
+        "login_id": "ID",
+        "login_password": "Password",
+        "login_button": "Login",
+        "logout_button": "Logout",
+        "login_error": "Incorrect ID or password.",
+        "logged_in_as": "Logged in as",
         "tab_overview": "Overview",
         "tab_diagram": "Visual Guide",
         "tab_table": "Wage Table",
         "tab_sim": "Promotion Simulation",
         "tab_next_year": "Next-Year Promotion",
         "tab_allowance_export": "Allowance Export",
+        "tab_employee": "Employee Roster",
         "tab_admin": "Admin Settings",
         "sidebar_lang": "Language",
         "sidebar_currency": "Currency symbol",
@@ -239,11 +288,34 @@ LANGUAGE_PACK = {
         "include_university_allowance": "Include university allowance",
         "include_adjustment_allowance": "Include adjustment allowance",
         "include_other_allowance": "Include other allowance",
-        "base_table": "Base pay table",
-        "allowance_total": "Allowance total",
-        "total_pay": "Total pay",
         "export_with_allowances_csv": "Download allowance CSV",
         "export_with_allowances_excel": "Download allowance Excel",
+        "employee_heading": "Employee Roster",
+        "employee_text": "Import an employee roster CSV and calculate base pay, allowances, total pay, and next-year promoted GS for each employee.",
+        "employee_template_download": "Download employee roster template",
+        "employee_upload": "Upload employee roster CSV",
+        "employee_apply": "Apply employee roster",
+        "employee_preview": "Employee roster preview",
+        "employee_import_success": "Employee roster was applied.",
+        "employee_import_empty": "Please choose an employee roster CSV.",
+        "employee_import_error": "Employee roster CSV format is invalid.",
+        "employee_export_csv": "Download employee payroll CSV",
+        "employee_export_excel": "Download employee payroll Excel",
+        "employee_id": "Employee ID",
+        "employee_name": "Name",
+        "employee_grade": "Grade",
+        "employee_step": "Step",
+        "employee_basic_pay": "Base Pay",
+        "employee_university_flag": "University Graduate",
+        "employee_adjustment_allowance": "Adjustment Allowance",
+        "employee_other_allowance": "Other Allowance",
+        "employee_university_allowance": "University Allowance",
+        "employee_total_allowance": "Allowance Total",
+        "employee_total_pay": "Total Pay",
+        "employee_next_year_gs": "Next-Year Promoted GS",
+        "employee_next_year_basic_pay": "Next-Year Promoted Base Pay",
+        "active_only": "Show active employees only",
+        "default_university_allowance": "Fixed university allowance for roster calculation",
         "admin_heading": "Admin Settings",
         "admin_text": "Here you can change the auto-generation rule for the initial table. If actual salary values are fixed, you can edit the wage table directly below.",
         "base_salary": "Base Salary at Step 1",
@@ -274,7 +346,6 @@ LANGUAGE_PACK = {
         "supabase_status_ok": "Supabase connection: ON",
         "supabase_status_off": "Supabase connection: OFF (using local defaults)",
         "supabase_save_error": "Failed to save to Supabase.",
-        "supabase_load_error": "Failed to load from Supabase. Using default values.",
         "admin_password": "Admin password",
         "admin_unlock": "Unlock admin",
         "admin_locked": "A password is required to change admin settings.",
@@ -284,9 +355,6 @@ LANGUAGE_PACK = {
 }
 
 
-# =========================================================
-# Helpers
-# =========================================================
 def t(key: str) -> str:
     return LANGUAGE_PACK[st.session_state.lang][key]
 
@@ -299,6 +367,22 @@ def format_money(value: float) -> str:
     decimals = st.session_state.decimals
     symbol = st.session_state.currency_symbol
     return f"{symbol}{value:,.{decimals}f}"
+
+
+def get_login_users() -> Dict[str, str]:
+    try:
+        raw = st.secrets.get("LOGIN_USERS_JSON", "")
+        if raw:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                return {str(k): str(v) for k, v in parsed.items()}
+    except Exception:
+        pass
+    return {}
+
+
+def login_enabled() -> bool:
+    return len(get_login_users()) > 0
 
 
 def build_wage_table(params: Dict[str, Dict[str, float]]) -> pd.DataFrame:
@@ -320,7 +404,7 @@ def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
         else:
             return None
         with pd.ExcelWriter(output, engine=engine) as writer:
-            df.to_excel(writer, index=False, sheet_name="WageTable")
+            df.to_excel(writer, index=False, sheet_name="Export")
         output.seek(0)
         return output.getvalue()
     except Exception:
@@ -339,9 +423,23 @@ def build_settings_csv_template() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_employee_csv_template() -> pd.DataFrame:
+    return pd.DataFrame([
+        {
+            "Employee ID": "E001",
+            "Name": "Sample Employee",
+            "Grade": "G5A",
+            "Step": 4,
+            "University Graduate": 1,
+            "Adjustment Allowance": 1000,
+            "Other Allowance": 500,
+            "Active": 1,
+        }
+    ])
+
+
 def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
     required_cols = ["Grade", "Base", "AP", "PP"]
-
     if list(df.columns) != required_cols:
         raise ValueError(f"Columns must be exactly: {required_cols}")
     if len(df) != len(GRADES):
@@ -360,6 +458,28 @@ def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, floa
             raise ValueError(f"Row {i + 1}: Base/AP/PP must be numeric") from exc
         new_params[grade] = {"base": base, "ap": ap, "pp": pp}
     return new_params
+
+
+def validate_employee_roster_csv(df: pd.DataFrame) -> pd.DataFrame:
+    required_cols = DEFAULT_EMPLOYEE_COLUMNS
+    if list(df.columns) != required_cols:
+        raise ValueError(f"Columns must be exactly: {required_cols}")
+
+    out = df.copy()
+    out["Grade"] = out["Grade"].astype(str)
+    if not out["Grade"].isin(GRADES).all():
+        raise ValueError("Grade column contains invalid grade")
+
+    out["Step"] = pd.to_numeric(out["Step"], errors="raise").astype(int)
+    if not out["Step"].isin(STEPS).all():
+        raise ValueError("Step column contains invalid step")
+
+    for col in ["University Graduate", "Adjustment Allowance", "Other Allowance", "Active"]:
+        out[col] = pd.to_numeric(out[col], errors="raise")
+
+    out["University Graduate"] = out["University Graduate"].astype(int)
+    out["Active"] = out["Active"].astype(int)
+    return out
 
 
 def params_to_rows(params: Dict[str, Dict[str, float]]) -> List[Dict[str, float]]:
@@ -392,21 +512,12 @@ def get_supabase_config() -> Optional[Dict[str, str]]:
         url = st.secrets["SUPABASE_URL"]
         service_role_key = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
         table = st.secrets.get("SUPABASE_TABLE", "wage_settings")
-        return {
-            "url": url.rstrip("/"),
-            "key": service_role_key,
-            "table": table,
-        }
+        return {"url": url.rstrip("/"), "key": service_role_key, "table": table}
     except Exception:
         return None
 
 
-def supabase_request(
-    method: str,
-    path: str,
-    body: Optional[object] = None,
-    query: Optional[Dict[str, str]] = None,
-):
+def supabase_request(method: str, path: str, body: Optional[object] = None, query: Optional[Dict[str, str]] = None):
     config = get_supabase_config()
     if config is None:
         raise RuntimeError("Supabase is not configured")
@@ -420,7 +531,6 @@ def supabase_request(
         "Authorization": f"Bearer {config['key']}",
         "Content-Type": "application/json",
     }
-
     if method in ("POST", "PATCH"):
         headers["Prefer"] = "return=representation"
     if method == "POST":
@@ -440,23 +550,17 @@ def load_settings_from_supabase() -> Dict[str, Dict[str, float]]:
     config = get_supabase_config()
     if config is None:
         return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
-
     try:
         result = supabase_request(
             method="GET",
             path=config["table"],
-            query={
-                "select": "grade,base,ap,pp",
-                "order": "grade.asc",
-            },
+            query={"select": "grade,base,ap,pp", "order": "grade.asc"},
         )
         if not result:
             return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
-
         grades_found = [row["grade"] for row in result]
         if sorted(grades_found) != sorted(GRADES):
             return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
-
         return rows_to_params(result)
     except Exception:
         return {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
@@ -466,15 +570,9 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
     config = get_supabase_config()
     if config is None:
         return
-
     rows = params_to_rows(params)
     try:
-        supabase_request(
-            method="POST",
-            path=config["table"],
-            body=rows,
-            query={"on_conflict": "grade"},
-        )
+        supabase_request(method="POST", path=config["table"], body=rows, query={"on_conflict": "grade"})
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
         raise RuntimeError(detail) from exc
@@ -497,12 +595,7 @@ def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
     return float(row.iloc[0][grade])
 
 
-def find_promotion_result(
-    df: pd.DataFrame,
-    params: Dict[str, Dict[str, float]],
-    current_grade: str,
-    current_step: int,
-) -> Optional[Dict[str, float]]:
+def find_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]], current_grade: str, current_step: int) -> Optional[Dict[str, float]]:
     next_grade = NEXT_GRADE[current_grade]
     if not next_grade:
         return None
@@ -529,13 +622,7 @@ def find_promotion_result(
     }
 
 
-def find_next_year_promotion_result(
-    df: pd.DataFrame,
-    params: Dict[str, Dict[str, float]],
-    current_grade: str,
-    current_step: int,
-    apply_next_step: bool = True,
-) -> Optional[Dict[str, float]]:
+def find_next_year_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]], current_grade: str, current_step: int, apply_next_step: bool = True) -> Optional[Dict[str, float]]:
     simulated_step = min(current_step + 1, max(STEPS)) if apply_next_step else current_step
     base_result = find_promotion_result(df, params, current_grade, simulated_step)
     if base_result is None:
@@ -550,15 +637,7 @@ def find_next_year_promotion_result(
     }
 
 
-def build_allowance_export_table(
-    df: pd.DataFrame,
-    include_adjustment: bool,
-    adjustment_amount: float,
-    include_university: bool,
-    university_amount: float,
-    include_other: bool,
-    other_amount: float,
-) -> pd.DataFrame:
+def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adjustment_amount: float, include_university: bool, university_amount: float, include_other: bool, other_amount: float) -> pd.DataFrame:
     out = df.copy()
     allowance_total = 0.0
     if include_adjustment:
@@ -570,11 +649,49 @@ def build_allowance_export_table(
 
     for g in GRADES:
         out[g] = pd.to_numeric(out[g], errors="coerce")
-
     out["Allowance Total"] = allowance_total
     for g in GRADES:
         out[f"{g} Total"] = out[g] + allowance_total
     return out
+
+
+def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, params: Dict[str, Dict[str, float]], university_allowance_amount: float, apply_next_step: bool = True) -> pd.DataFrame:
+    rows = []
+    for _, row in roster_df.iterrows():
+        grade = str(row["Grade"])
+        step = int(row["Step"])
+        basic_pay = get_current_salary(wage_df, grade, step)
+        adjustment_allowance = float(row["Adjustment Allowance"])
+        other_allowance = float(row["Other Allowance"])
+        university_flag = int(row["University Graduate"])
+        university_allowance = float(university_allowance_amount if university_flag == 1 else 0.0)
+        total_allowance = adjustment_allowance + other_allowance + university_allowance
+        total_pay = basic_pay + total_allowance
+
+        next_year = find_next_year_promotion_result(wage_df, params, grade, step, apply_next_step=apply_next_step)
+        next_year_gs = "-"
+        next_year_basic = None
+        if next_year is not None:
+            next_year_gs = f"{next_year['target_grade']}-S{next_year['target_step']}"
+            next_year_basic = float(next_year["target_salary"])
+
+        rows.append({
+            t("employee_id"): str(row["Employee ID"]),
+            t("employee_name"): str(row["Name"]),
+            t("employee_grade"): grade,
+            t("employee_step"): step,
+            t("employee_basic_pay"): basic_pay,
+            t("employee_university_flag"): university_flag,
+            t("employee_adjustment_allowance"): adjustment_allowance,
+            t("employee_other_allowance"): other_allowance,
+            t("employee_university_allowance"): university_allowance,
+            t("employee_total_allowance"): total_allowance,
+            t("employee_total_pay"): total_pay,
+            t("employee_next_year_gs"): next_year_gs,
+            t("employee_next_year_basic_pay"): next_year_basic,
+            "_active": int(row["Active"]),
+        })
+    return pd.DataFrame(rows)
 
 
 def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
@@ -660,10 +777,33 @@ if "decimals" not in st.session_state:
     st.session_state.decimals = 0
 if "admin_unlocked" not in st.session_state:
     st.session_state.admin_unlocked = False
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "login_user" not in st.session_state:
+    st.session_state.login_user = ""
 if "params" not in st.session_state:
     st.session_state.params = load_settings_from_supabase()
 if "wage_df" not in st.session_state:
     st.session_state.wage_df = build_wage_table(st.session_state.params)
+if "employee_roster_df" not in st.session_state:
+    st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
+
+# =========================================================
+# Login gate
+# =========================================================
+if login_enabled() and not st.session_state.logged_in:
+    st.title(t("login_title"))
+    login_id = st.text_input(t("login_id"))
+    login_password = st.text_input(t("login_password"), type="password")
+    if st.button(t("login_button"), use_container_width=True):
+        users = get_login_users()
+        if users.get(login_id) == login_password:
+            st.session_state.logged_in = True
+            st.session_state.login_user = login_id
+            st.rerun()
+        else:
+            st.error(t("login_error"))
+    st.stop()
 
 # =========================================================
 # Sidebar
@@ -675,15 +815,16 @@ st.session_state.lang = st.sidebar.radio(
     index=0 if st.session_state.lang == "日本語" else 1,
 )
 
-st.session_state.currency_symbol = st.sidebar.text_input(
-    t("sidebar_currency"),
-    value=st.session_state.currency_symbol,
-)
-st.session_state.decimals = st.sidebar.selectbox(
-    t("sidebar_decimals"),
-    [0, 1, 2],
-    index=[0, 1, 2].index(st.session_state.decimals),
-)
+st.session_state.currency_symbol = st.sidebar.text_input(t("sidebar_currency"), value=st.session_state.currency_symbol)
+st.session_state.decimals = st.sidebar.selectbox(t("sidebar_decimals"), [0, 1, 2], index=[0, 1, 2].index(st.session_state.decimals))
+
+if login_enabled() and st.session_state.logged_in:
+    st.sidebar.caption(f"{t('logged_in_as')}: {st.session_state.login_user}")
+    if st.sidebar.button(t("logout_button"), use_container_width=True):
+        st.session_state.logged_in = False
+        st.session_state.login_user = ""
+        st.session_state.admin_unlocked = False
+        st.rerun()
 
 if get_supabase_config() is not None:
     st.sidebar.success(t("supabase_status_ok"))
@@ -711,25 +852,22 @@ with m2:
 with m3:
     st.metric("GS Patterns", len(GRADES) * len(STEPS))
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     t("tab_overview"),
     t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
     t("tab_next_year"),
     t("tab_allowance_export"),
+    t("tab_employee"),
     t("tab_admin"),
 ])
 
-# =========================================================
-# Tab 1: Overview
-# =========================================================
 with tab1:
     st.subheader(t("overview_heading"))
     st.write(t("overview_text1"))
     st.write(t("overview_text2"))
     st.write(t("grade_axis"))
-
     st.subheader(t("rule_heading"))
     st.markdown(f"- {t('rule_ap')}")
     st.markdown(f"- {t('rule_pp')}")
@@ -744,36 +882,23 @@ with tab1:
     st.subheader(t("grade_table"))
     st.dataframe(ref_df, use_container_width=True, hide_index=True)
 
-# =========================================================
-# Tab 2: Diagram
-# =========================================================
 with tab2:
     st.subheader(t("diagram_heading1"))
     st.write(t("diagram_help1"))
     st.graphviz_chart(grade_step_grid(example_grade, min(example_step, 5)))
-
     st.subheader(t("diagram_heading2"))
     st.write(t("diagram_help2"))
     st.graphviz_chart(raise_diagram())
-
     st.subheader(t("diagram_heading3"))
     st.write(t("diagram_help3"))
-
     sample_result = find_promotion_result(st.session_state.wage_df, st.session_state.params, "G5A", 4)
     if sample_result:
-        st.graphviz_chart(
-            promotion_diagram("G5A", 4, sample_result["target_grade"], int(sample_result["target_step"]))
-        )
-
+        st.graphviz_chart(promotion_diagram("G5A", 4, sample_result["target_grade"], int(sample_result["target_step"])))
     st.info(t("simple_example_text"))
 
-# =========================================================
-# Tab 3: Wage Table
-# =========================================================
 with tab3:
     st.subheader(t("wage_heading"))
     st.caption(t("wage_caption"))
-
     edited_df = st.data_editor(
         st.session_state.wage_df,
         use_container_width=True,
@@ -792,12 +917,7 @@ with tab3:
     )
     st.session_state.wage_df = edited_df
 
-    view_mode = st.radio(
-        t("table_view_mode"),
-        [t("table_mode_raw"), t("table_mode_with_label")],
-        horizontal=True,
-    )
-
+    view_mode = st.radio(t("table_view_mode"), [t("table_mode_raw"), t("table_mode_with_label")], horizontal=True)
     if view_mode == t("table_mode_raw"):
         st.dataframe(display_table_with_formats(st.session_state.wage_df), use_container_width=True, hide_index=True)
     else:
@@ -805,36 +925,18 @@ with tab3:
 
     csv_bytes = st.session_state.wage_df.to_csv(index=False).encode("utf-8-sig")
     excel_bytes = make_excel_file(st.session_state.wage_df)
-
     d1, d2 = st.columns(2)
     with d1:
-        st.download_button(
-            t("download_csv"),
-            data=csv_bytes,
-            file_name="wage_table.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+        st.download_button(t("download_csv"), data=csv_bytes, file_name="wage_table.csv", mime="text/csv", use_container_width=True)
     with d2:
         if excel_bytes is not None:
-            st.download_button(
-                t("download_excel"),
-                data=excel_bytes,
-                file_name="wage_table.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-            )
+            st.download_button(t("download_excel"), data=excel_bytes, file_name="wage_table.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         else:
             st.info(t("excel_unavailable"))
-
     st.caption(t("download_note"))
 
-# =========================================================
-# Tab 4: Simulation
-# =========================================================
 with tab4:
     st.subheader(t("sim_heading"))
-
     c1, c2, c3 = st.columns(3)
     with c1:
         current_grade = st.selectbox(t("current_grade"), GRADES[:-1], index=0)
@@ -853,16 +955,11 @@ with tab4:
 
     if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
         result = find_promotion_result(st.session_state.wage_df, st.session_state.params, current_grade, int(current_step))
-
         if result is None:
             st.warning(t("no_next_grade"))
         else:
-            total_allowance = adjustment_allowance + other_allowance
-            if is_univ:
-                total_allowance += university_allowance
-
+            total_allowance = adjustment_allowance + other_allowance + (university_allowance if is_univ else 0.0)
             final_salary = result["target_salary"] + total_allowance
-
             r1, r2, r3 = st.columns(3)
             with r1:
                 st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
@@ -870,39 +967,15 @@ with tab4:
                 st.metric(t("gs_after"), f"{result['target_grade']}-S{result['target_step']}")
             with r3:
                 st.metric(t("final_salary"), format_money(final_salary))
-
             st.subheader(t("promotion_flow"))
-            st.graphviz_chart(
-                promotion_diagram(current_grade, int(current_step), result["target_grade"], int(result["target_step"]))
-            )
-
+            st.graphviz_chart(promotion_diagram(current_grade, int(current_step), result["target_grade"], int(result["target_step"])))
             search_df = st.session_state.wage_df[["Step", result["target_grade"]]].copy()
             search_df["Eligible"] = search_df[result["target_grade"]] >= result["minimum_required"]
             st.subheader(t("step_search_result"))
             st.dataframe(search_df, use_container_width=True, hide_index=True)
 
-            sim_df = pd.DataFrame([
-                {
-                    t("gs_before"): f"{current_grade}-S{current_step}",
-                    t("current_salary"): format_money(result["current_salary"]),
-                    t("min_required"): format_money(result["minimum_required"]),
-                    t("promoted_grade"): result["target_grade"],
-                    t("promoted_step"): int(result["target_step"]),
-                    t("promoted_salary"): format_money(result["target_salary"]),
-                    t("adjust_allowance"): format_money(adjustment_allowance),
-                    t("univ_allowance"): format_money(university_allowance if is_univ else 0.0),
-                    t("other_allowance"): format_money(other_allowance),
-                    t("final_salary"): format_money(final_salary),
-                }
-            ])
-            st.dataframe(sim_df, use_container_width=True, hide_index=True)
-
-# =========================================================
-# Tab 5: Next-Year Promotion
-# =========================================================
 with tab5:
     st.subheader(t("next_year_heading"))
-
     ny1, ny2, ny3 = st.columns(3)
     with ny1:
         next_year_grade = st.selectbox(t("current_grade"), GRADES[:-1], index=0, key="next_year_grade")
@@ -912,14 +985,7 @@ with tab5:
         apply_next_step_flag = st.checkbox(t("apply_next_step"), value=True)
 
     if st.button(t("simulate"), use_container_width=True, key="simulate_next_year"):
-        next_year_result = find_next_year_promotion_result(
-            st.session_state.wage_df,
-            st.session_state.params,
-            next_year_grade,
-            int(next_year_step),
-            apply_next_step=apply_next_step_flag,
-        )
-
+        next_year_result = find_next_year_promotion_result(st.session_state.wage_df, st.session_state.params, next_year_grade, int(next_year_step), apply_next_step=apply_next_step_flag)
         if next_year_result is None:
             st.warning(t("no_next_grade"))
         else:
@@ -930,36 +996,11 @@ with tab5:
                 st.metric(t("next_year_current_salary"), format_money(next_year_result["next_year_current_salary"]))
             with nyr3:
                 st.metric(t("next_year_result"), f"{next_year_result['target_grade']}-S{next_year_result['target_step']}")
+            st.graphviz_chart(promotion_diagram(next_year_grade, int(next_year_result["next_year_current_step"]), next_year_result["target_grade"], int(next_year_result["target_step"])))
 
-            st.graphviz_chart(
-                promotion_diagram(
-                    next_year_grade,
-                    int(next_year_result["next_year_current_step"]),
-                    next_year_result["target_grade"],
-                    int(next_year_result["target_step"]),
-                )
-            )
-
-            next_year_df = pd.DataFrame([
-                {
-                    t("current_grade"): next_year_grade,
-                    t("next_year_current_step"): int(next_year_result["next_year_current_step"]),
-                    t("next_year_current_salary"): format_money(next_year_result["next_year_current_salary"]),
-                    t("min_required"): format_money(next_year_result["minimum_required"]),
-                    t("promoted_grade"): next_year_result["target_grade"],
-                    t("promoted_step"): int(next_year_result["target_step"]),
-                    t("promoted_salary"): format_money(next_year_result["target_salary"]),
-                }
-            ])
-            st.dataframe(next_year_df, use_container_width=True, hide_index=True)
-
-# =========================================================
-# Tab 6: Allowance Export
-# =========================================================
 with tab6:
     st.subheader(t("allowance_export_heading"))
     st.write(t("allowance_export_text"))
-
     ex1, ex2, ex3 = st.columns(3)
     with ex1:
         include_adjustment = st.checkbox(t("include_adjustment_allowance"), value=True)
@@ -971,45 +1012,94 @@ with tab6:
         include_other = st.checkbox(t("include_other_allowance"), value=False)
         other_amount = st.number_input(t("other_allowance_export"), min_value=0.0, value=0.0, step=100.0)
 
-    allowance_export_df = build_allowance_export_table(
-        st.session_state.wage_df,
-        include_adjustment=include_adjustment,
-        adjustment_amount=adjustment_amount,
-        include_university=include_university,
-        university_amount=university_amount,
-        include_other=include_other,
-        other_amount=other_amount,
-    )
+    allowance_export_df = build_allowance_export_table(st.session_state.wage_df, include_adjustment, adjustment_amount, include_university, university_amount, include_other, other_amount)
     st.dataframe(allowance_export_df, use_container_width=True, hide_index=True)
-
     allowance_csv = allowance_export_df.to_csv(index=False).encode("utf-8-sig")
     allowance_excel = make_excel_file(allowance_export_df)
-
     exd1, exd2 = st.columns(2)
     with exd1:
-        st.download_button(
-            t("export_with_allowances_csv"),
-            data=allowance_csv,
-            file_name="wage_table_with_allowances.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+        st.download_button(t("export_with_allowances_csv"), data=allowance_csv, file_name="wage_table_with_allowances.csv", mime="text/csv", use_container_width=True)
     with exd2:
         if allowance_excel is not None:
-            st.download_button(
-                t("export_with_allowances_excel"),
-                data=allowance_excel,
-                file_name="wage_table_with_allowances.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-            )
+            st.download_button(t("export_with_allowances_excel"), data=allowance_excel, file_name="wage_table_with_allowances.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         else:
             st.info(t("excel_unavailable"))
 
-# =========================================================
-# Tab 7: Admin
-# =========================================================
 with tab7:
+    st.subheader(t("employee_heading"))
+    st.write(t("employee_text"))
+    template_emp_df = build_employee_csv_template()
+    template_emp_csv = template_emp_df.to_csv(index=False).encode("utf-8-sig")
+    st.download_button(t("employee_template_download"), data=template_emp_csv, file_name="employee_roster_template.csv", mime="text/csv")
+    uploaded_emp_csv = st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload")
+
+    if uploaded_emp_csv is not None:
+        try:
+            uploaded_emp_csv.seek(0)
+            preview_emp_df = pd.read_csv(uploaded_emp_csv)
+            st.markdown(f"**{t('employee_preview')}**")
+            st.dataframe(preview_emp_df, use_container_width=True, hide_index=True)
+        except Exception:
+            st.error(t("employee_import_error"))
+
+    if st.button(t("employee_apply"), use_container_width=True):
+        if uploaded_emp_csv is None:
+            st.warning(t("employee_import_empty"))
+        else:
+            try:
+                uploaded_emp_csv.seek(0)
+                imported_emp_df = pd.read_csv(uploaded_emp_csv)
+                st.session_state.employee_roster_df = validate_employee_roster_csv(imported_emp_df)
+                st.success(t("employee_import_success"))
+            except Exception as e:
+                st.error(f"{t('employee_import_error')}\n\nDetail: {str(e)}")
+
+    if not st.session_state.employee_roster_df.empty:
+        active_only = st.checkbox(t("active_only"), value=True)
+        roster_university_allowance = st.number_input(t("default_university_allowance"), min_value=0.0, value=0.0, step=100.0)
+        roster_apply_next_step = st.checkbox(t("apply_next_step"), value=True, key="roster_apply_next_step")
+
+        payroll_df = build_employee_payroll(
+            st.session_state.employee_roster_df,
+            st.session_state.wage_df,
+            st.session_state.params,
+            university_allowance_amount=roster_university_allowance,
+            apply_next_step=roster_apply_next_step,
+        )
+
+        if active_only:
+            active_mask = st.session_state.employee_roster_df["Active"].astype(int).tolist()
+            payroll_df = payroll_df[[a == 1 for a in active_mask]].reset_index(drop=True)
+
+        display_payroll_df = payroll_df.copy()
+        money_cols = [
+            t("employee_basic_pay"),
+            t("employee_adjustment_allowance"),
+            t("employee_other_allowance"),
+            t("employee_university_allowance"),
+            t("employee_total_allowance"),
+            t("employee_total_pay"),
+            t("employee_next_year_basic_pay"),
+        ]
+        for col in money_cols:
+            if col in display_payroll_df.columns:
+                display_payroll_df[col] = display_payroll_df[col].apply(lambda x: format_money(x) if pd.notna(x) else "-")
+        if "_active" in display_payroll_df.columns:
+            display_payroll_df = display_payroll_df.drop(columns=["_active"])
+
+        st.dataframe(display_payroll_df, use_container_width=True, hide_index=True)
+        emp_csv = payroll_df.drop(columns=["_active"]).to_csv(index=False).encode("utf-8-sig")
+        emp_excel = make_excel_file(payroll_df.drop(columns=["_active"]))
+        e1, e2 = st.columns(2)
+        with e1:
+            st.download_button(t("employee_export_csv"), data=emp_csv, file_name="employee_payroll.csv", mime="text/csv", use_container_width=True)
+        with e2:
+            if emp_excel is not None:
+                st.download_button(t("employee_export_excel"), data=emp_excel, file_name="employee_payroll.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            else:
+                st.info(t("excel_unavailable"))
+
+with tab8:
     st.subheader(t("admin_heading"))
     st.write(t("admin_text"))
     st.warning(t("warning_rebuild"))
@@ -1027,32 +1117,13 @@ with tab7:
     else:
         input_cols = st.columns(len(GRADES))
         tmp_params = {}
-
         for idx, g in enumerate(GRADES):
             with input_cols[idx]:
                 st.markdown(f"**{g}**")
                 st.caption(grade_label(g))
-                base = st.number_input(
-                    f"{g} - {t('base_salary')}",
-                    min_value=0.0,
-                    value=float(st.session_state.params[g]["base"]),
-                    step=100.0,
-                    key=f"base_{g}",
-                )
-                ap = st.number_input(
-                    f"{g} - {t('ap')}",
-                    min_value=0.0,
-                    value=float(st.session_state.params[g]["ap"]),
-                    step=50.0,
-                    key=f"ap_{g}",
-                )
-                pp = st.number_input(
-                    f"{g} - {t('pp')}",
-                    min_value=0.0,
-                    value=float(st.session_state.params[g]["pp"]),
-                    step=50.0,
-                    key=f"pp_{g}",
-                )
+                base = st.number_input(f"{g} - {t('base_salary')}", min_value=0.0, value=float(st.session_state.params[g]["base"]), step=100.0, key=f"base_{g}")
+                ap = st.number_input(f"{g} - {t('ap')}", min_value=0.0, value=float(st.session_state.params[g]["ap"]), step=50.0, key=f"ap_{g}")
+                pp = st.number_input(f"{g} - {t('pp')}", min_value=0.0, value=float(st.session_state.params[g]["pp"]), step=50.0, key=f"pp_{g}")
                 tmp_params[g] = {"base": base, "ap": ap, "pp": pp}
 
         b1, b2 = st.columns(2)
@@ -1077,16 +1148,9 @@ with tab7:
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
         st.write(t("csv_import_text"))
-
         template_df = build_settings_csv_template()
         template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            t("csv_template_download"),
-            data=template_csv,
-            file_name="wage_table_settings_template.csv",
-            mime="text/csv",
-        )
-
+        st.download_button(t("csv_template_download"), data=template_csv, file_name="wage_table_settings_template.csv", mime="text/csv")
         uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
 
         if uploaded_csv is not None:
@@ -1113,4 +1177,4 @@ with tab7:
                     st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
 
 st.markdown("---")
-st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, CSV import, and Supabase persistence in Streamlit.")
+st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
