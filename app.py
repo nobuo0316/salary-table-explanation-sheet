@@ -126,6 +126,14 @@ LANGUAGE_PACK = {
         "promotion_flow": "昇格の流れ",
         "step_search_result": "該当Stepの探索結果",
         "legend": "凡例",
+        "csv_import_heading": "CSVインポート",
+        "csv_import_text": "指定のCSV書式を使って、賃金テーブルを一括更新できます。",
+        "csv_upload": "CSVファイルをアップロード",
+        "csv_apply": "CSVを賃金テーブルに反映",
+        "csv_template_download": "CSVテンプレートをダウンロード",
+        "csv_import_success": "CSVから賃金テーブルを更新しました。",
+        "csv_import_error": "CSVの形式が正しくありません。Step列と G6, G5B, G5A, G4, G3, G2 列が必要です。",
+        "csv_import_empty": "CSVファイルを選択してください。",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
@@ -207,6 +215,14 @@ LANGUAGE_PACK = {
         "promotion_flow": "Promotion Flow",
         "step_search_result": "Step Search Result",
         "legend": "Legend",
+        "csv_import_heading": "CSV Import",
+        "csv_import_text": "You can bulk update the wage table by using the specified CSV format.",
+        "csv_upload": "Upload CSV file",
+        "csv_apply": "Apply CSV to wage table",
+        "csv_template_download": "Download CSV template",
+        "csv_import_success": "The wage table has been updated from the CSV file.",
+        "csv_import_error": "The CSV format is invalid. The file must contain Step, G6, G5B, G5A, G4, G3, and G2 columns.",
+        "csv_import_empty": "Please choose a CSV file first.",
     },
 }
 
@@ -251,6 +267,32 @@ def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
         return output.getvalue()
     except Exception:
         return None
+
+
+def build_csv_template() -> pd.DataFrame:
+    return build_wage_table(DEFAULT_PARAMS)
+
+
+def validate_imported_wage_table(df: pd.DataFrame) -> pd.DataFrame:
+    required_cols = ["Step", "G6", "G5B", "G5A", "G4", "G3", "G2"]
+    if list(df.columns) != required_cols:
+        raise ValueError("Invalid columns")
+
+    validated = df.copy()
+    validated = validated[required_cols]
+
+    if len(validated) != len(STEPS):
+        raise ValueError("Invalid row count")
+
+    expected_steps = STEPS
+    actual_steps = validated["Step"].tolist()
+    if actual_steps != expected_steps:
+        raise ValueError("Invalid Step values")
+
+    for col in required_cols[1:]:
+        validated[col] = pd.to_numeric(validated[col], errors="raise")
+
+    return validated
 
 
 def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
@@ -665,5 +707,45 @@ with tab5:
             st.session_state.wage_df = build_wage_table(st.session_state.params)
             st.success(t("success_reset"))
 
+    st.markdown("---")
+    st.subheader(t("csv_import_heading"))
+    st.write(t("csv_import_text"))
+
+    template_df = build_csv_template()
+    template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        t("csv_template_download"),
+        data=template_csv,
+        file_name="wage_table_import_template.csv",
+        mime="text/csv",
+        use_container_width=False,
+    )
+
+    uploaded_csv = st.file_uploader(
+        t("csv_upload"),
+        type=["csv"],
+        key="wage_csv_upload",
+    )
+
+    if uploaded_csv is not None:
+        try:
+            preview_df = pd.read_csv(uploaded_csv)
+            st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        except Exception:
+            st.error(t("csv_import_error"))
+
+    if st.button(t("csv_apply"), use_container_width=True):
+        if uploaded_csv is None:
+            st.warning(t("csv_import_empty"))
+        else:
+            try:
+                uploaded_csv.seek(0)
+                imported_df = pd.read_csv(uploaded_csv)
+                validated_df = validate_imported_wage_table(imported_df)
+                st.session_state.wage_df = validated_df
+                st.success(t("csv_import_success"))
+            except Exception:
+                st.error(t("csv_import_error"))
+
 st.markdown("---")
-st.caption("Created for bilingual wage table explanation, visual guidance, editing, and promotion simulation in Streamlit.")
+st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, and CSV import in Streamlit.")
