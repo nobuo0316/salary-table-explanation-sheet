@@ -247,10 +247,7 @@ LANGUAGE_PACK = {
         "grade": "Grade",
         "position": "Position Image",
         "next_grade": "Next Grade",
-        "glabel_G6": "Staff",
-        "glabel_G5B": "Senior Staff",
-        "glabel_G5A": "Upper Senior Staff",
-        "glabel_G4": "Supervisor",
+        "glabel_G6": "Staff",\n        "glabel_G5B": "Senior Staff",\n        "glabel_G5A": "Upper Senior Staff",\n        "glabel_G4": "Supervisor",
         "glabel_G3": "Manager",
         "glabel_G2": "Deputy General Manager",
         "diagram_heading1": "1) Relationship between Grade and Step",
@@ -818,16 +815,7 @@ if "login_user" not in st.session_state:
     st.session_state.login_user = ""
 if "params" not in st.session_state:
     st.session_state.params = load_settings_from_supabase()
-if "wage_df" not in st.session_state:
-    st.session_state.wage_df = build_wage_table(st.session_state.params)
-if "employee_roster_df" not in st.session_state:
-    st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
-
-# =========================================================
-# Simple visual styling
-# =========================================================
-st.markdown(
-    """
+if "wage_df" not in st.session_state:\n    st.session_state.wage_df = build_wage_table(st.session_state.params)\nif "employee_roster_df" not in st.session_state:\n    st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)\n\n# =========================================================\n# Simple visual styling\n# =========================================================\nst.markdown(\n    """
     <style>
     .main-card {
         background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
@@ -903,9 +891,7 @@ if login_enabled() and st.session_state.logged_in:
 if get_supabase_config() is not None:
     st.sidebar.success(t("supabase_status_ok"))
 else:
-    st.sidebar.info(t("supabase_status_off"))
-
-st.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
+    st.sidebar.info(t("supabase_status_off"))\n\nst.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
 st.sidebar.markdown("---")
 st.sidebar.write(t("sidebar_example"))
 example_grade = st.sidebar.selectbox("Grade", GRADES, index=2, key="example_grade")
@@ -1055,14 +1041,7 @@ with tab3:
         hide_index=True,
         column_config={
             "Step": st.column_config.NumberColumn("Step", disabled=True),
-            "G6": st.column_config.NumberColumn("G6", format="%.2f"),
-            "G5B": st.column_config.NumberColumn("G5B", format="%.2f"),
-            "G5A": st.column_config.NumberColumn("G5A", format="%.2f"),
-            "G4": st.column_config.NumberColumn("G4", format="%.2f"),
-            "G3": st.column_config.NumberColumn("G3", format="%.2f"),
-            "G2": st.column_config.NumberColumn("G2", format="%.2f"),
-        },
-        key="wage_table_editor",
+            "G6": st.column_config.NumberColumn("G6", format="%.2f"),\n            "G5B": st.column_config.NumberColumn("G5B", format="%.2f"),\n            "G5A": st.column_config.NumberColumn("G5A", format="%.2f"),\n            "G4": st.column_config.NumberColumn("G4", format="%.2f"),\n            "G3": st.column_config.NumberColumn("G3", format="%.2f"),\n            "G2": st.column_config.NumberColumn("G2", format="%.2f"),\n        },\n        key="wage_table_editor",
     )
     st.session_state.wage_df = edited_df
 
@@ -1337,9 +1316,7 @@ with tab8:
                         st.success(t("csv_import_success"))
                         st.rerun()
                     except Exception as e:
-                        st.error(f"{t('csv_import_error')}
-
-Detail: {str(e)}")
+                        st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
