@@ -279,7 +279,7 @@ LANGUAGE_PACK = {
         "allowance_total": "Allowance total",
         "total_pay": "Total pay",
         "export_with_allowances_csv": "Download allowance CSV",
-        "export_with_allowances_excel": "Download allowance Excel",},{
+        "export_with_allowances_excel": "Download allowance Excel",
     },
 }
 
