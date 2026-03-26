@@ -3,6 +3,19 @@ import pandas as pd
 from io import BytesIO
 from typing import Dict, List, Optional
 
+# Optional Excel engines
+try:
+    import openpyxl  # noqa: F401
+    OPENPYXL_AVAILABLE = True
+except Exception:
+    OPENPYXL_AVAILABLE = False
+
+try:
+    import xlsxwriter  # noqa: F401
+    XLSXWRITER_AVAILABLE = True
+except Exception:
+    XLSXWRITER_AVAILABLE = False
+
 st.set_page_config(
     page_title="Wage Table / 賃金テーブル",
     page_icon="📊",
@@ -96,6 +109,7 @@ LANGUAGE_PACK = {
         "success_reset": "初期値に戻しました。",
         "download_note": "必要に応じてこのままCSV / Excelで配布できます。",
         "currency_preview": "表示例",
+        "excel_unavailable": "この環境ではExcel出力が使えません。CSVを使うか、requirements.txt に openpyxl または xlsxwriter を追加してください。",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
@@ -160,12 +174,11 @@ LANGUAGE_PACK = {
         "success_reset": "The defaults have been restored.",
         "download_note": "You can distribute this as CSV or Excel as needed.",
         "currency_preview": "Preview",
+        "excel_unavailable": "Excel export is unavailable in this environment. Please use CSV export or add openpyxl / xlsxwriter to requirements.txt.",
     },
 }
 
-# =========================================================
-# Helpers
-# =========================================================
+
 def t(key: str) -> str:
     return LANGUAGE_PACK[st.session_state.lang][key]
 
@@ -189,12 +202,24 @@ def build_wage_table(params: Dict[str, Dict[str, float]]) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def make_excel_file(df: pd.DataFrame) -> bytes:
+def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
     output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="WageTable")
-    output.seek(0)
-    return output.getvalue()
+
+    try:
+        if OPENPYXL_AVAILABLE:
+            engine = "openpyxl"
+        elif XLSXWRITER_AVAILABLE:
+            engine = "xlsxwriter"
+        else:
+            return None
+
+        with pd.ExcelWriter(output, engine=engine) as writer:
+            df.to_excel(writer, index=False, sheet_name="WageTable")
+
+        output.seek(0)
+        return output.getvalue()
+    except Exception:
+        return None
 
 
 def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
@@ -241,9 +266,6 @@ def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-# =========================================================
-# State
-# =========================================================
 if "lang" not in st.session_state:
     st.session_state.lang = "日本語"
 if "currency_symbol" not in st.session_state:
@@ -255,19 +277,20 @@ if "params" not in st.session_state:
 if "wage_df" not in st.session_state:
     st.session_state.wage_df = build_wage_table(st.session_state.params)
 
-# =========================================================
-# Sidebar
-# =========================================================
 st.sidebar.title("Wage Table")
 st.session_state.lang = st.sidebar.radio(
-    t("sidebar_lang") if "lang" in st.session_state else "表示言語",
+    "Language / 言語",
     ["日本語", "English"],
     index=0 if st.session_state.lang == "日本語" else 1,
 )
 
 currency_symbol = st.sidebar.text_input(t("sidebar_currency"), value=st.session_state.currency_symbol)
 st.session_state.currency_symbol = currency_symbol
-st.session_state.decimals = st.sidebar.selectbox(t("sidebar_decimals"), [0, 1, 2], index=[0, 1, 2].index(st.session_state.decimals))
+st.session_state.decimals = st.sidebar.selectbox(
+    t("sidebar_decimals"),
+    [0, 1, 2],
+    index=[0, 1, 2].index(st.session_state.decimals),
+)
 
 st.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
 st.sidebar.markdown("---")
@@ -276,9 +299,6 @@ example_grade = st.sidebar.selectbox("Grade", GRADES, index=2, key="example_grad
 example_step = st.sidebar.selectbox("Step", STEPS, index=3, key="example_step")
 st.sidebar.info(f"GS = {example_grade}-S{example_step}")
 
-# =========================================================
-# Main
-# =========================================================
 st.title(t("title"))
 st.caption(t("subtitle"))
 
@@ -297,9 +317,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     t("tab_admin"),
 ])
 
-# =========================================================
-# Tab 1: Overview
-# =========================================================
 with tab1:
     st.subheader(t("overview_heading"))
     st.write(t("overview_text1"))
@@ -320,9 +337,6 @@ with tab1:
     st.subheader(t("grade_table"))
     st.dataframe(ref_df, use_container_width=True, hide_index=True)
 
-# =========================================================
-# Tab 2: Wage Table
-# =========================================================
 with tab2:
     st.subheader(t("wage_heading"))
     st.caption(t("wage_caption"))
@@ -362,19 +376,19 @@ with tab2:
             use_container_width=True,
         )
     with d2:
-        st.download_button(
-            t("download_excel"),
-            data=excel_bytes,
-            file_name="wage_table.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+        if excel_bytes is not None:
+            st.download_button(
+                t("download_excel"),
+                data=excel_bytes,
+                file_name="wage_table.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        else:
+            st.info(t("excel_unavailable"))
 
     st.caption(t("download_note"))
 
-# =========================================================
-# Tab 3: Simulation
-# =========================================================
 with tab3:
     st.subheader(t("sim_heading"))
 
@@ -419,20 +433,18 @@ with tab3:
             with m3:
                 st.metric(t("final_salary"), format_money(final_salary))
 
-            sim_df = pd.DataFrame([
-                {
-                    t("gs_before"): f"{current_grade}-S{current_step}",
-                    t("current_salary"): result["current_salary"],
-                    t("min_required"): result["minimum_required"],
-                    t("promoted_grade"): result["target_grade"],
-                    t("promoted_step"): result["target_step"],
-                    t("promoted_salary"): result["target_salary"],
-                    t("adjust_allowance"): adjustment_allowance,
-                    t("univ_allowance"): university_allowance if is_univ else 0.0,
-                    t("other_allowance"): other_allowance,
-                    t("final_salary"): final_salary,
-                }
-            ])
+            sim_df = pd.DataFrame([{
+                t("gs_before"): f"{current_grade}-S{current_step}",
+                t("current_salary"): result["current_salary"],
+                t("min_required"): result["minimum_required"],
+                t("promoted_grade"): result["target_grade"],
+                t("promoted_step"): result["target_step"],
+                t("promoted_salary"): result["target_salary"],
+                t("adjust_allowance"): adjustment_allowance,
+                t("univ_allowance"): university_allowance if is_univ else 0.0,
+                t("other_allowance"): other_allowance,
+                t("final_salary"): final_salary,
+            }])
 
             st.dataframe(sim_df, use_container_width=True, hide_index=True)
 
@@ -441,9 +453,6 @@ with tab3:
                 f"{t('final_salary')}: {format_money(final_salary)}"
             )
 
-# =========================================================
-# Tab 4: Admin
-# =========================================================
 with tab4:
     st.subheader(t("admin_heading"))
     st.write(t("admin_text"))
@@ -454,7 +463,7 @@ with tab4:
 
     for idx, g in enumerate(GRADES):
         with input_cols[idx]:
-            st.markdown(f"**{g}**  ")
+            st.markdown(f"**{g}**")
             st.caption(grade_label(g))
             base = st.number_input(
                 f"{g} - {t('base_salary')}",
