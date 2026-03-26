@@ -17,8 +17,8 @@ except Exception:
     XLSXWRITER_AVAILABLE = False
 
 st.set_page_config(
-    page_title="Wage Table / 賃金テーブル",
-    page_icon="📊",
+    page_title="Wage Table Guide / 賃金テーブル説明ページ",
+    page_icon="📘",
     layout="wide",
 )
 
@@ -48,14 +48,16 @@ DEFAULT_PARAMS = {
 LANGUAGE_PACK = {
     "日本語": {
         "title": "賃金テーブル管理・説明ページ",
-        "subtitle": "説明、設定、テーブル編集、昇格シミュレーションを1つにまとめた完成版です。",
-        "tab_overview": "説明",
+        "subtitle": "初心者向けの図解、説明、テーブル編集、昇格シミュレーションを1つにまとめた完成版です。",
+        "tab_overview": "制度説明",
+        "tab_diagram": "図で理解",
         "tab_table": "賃金テーブル",
         "tab_sim": "昇格シミュレーション",
         "tab_admin": "管理設定",
         "sidebar_lang": "表示言語",
         "sidebar_currency": "通貨記号",
         "sidebar_decimals": "小数表示",
+        "sidebar_example": "GS例",
         "overview_heading": "制度概要",
         "overview_text1": "このページでは、Grade（グレード）と Step（ステップ）に基づく賃金テーブルを、英語・日本語の両方で説明・管理できます。",
         "overview_text2": "各社員には必ず Grade と Step があり、略して GS と表記します。例：G5A の Step 4 は G5A-S4 です。",
@@ -75,6 +77,14 @@ LANGUAGE_PACK = {
         "glabel_G4": "スーパーバイザー",
         "glabel_G3": "課長",
         "glabel_G2": "次長",
+        "diagram_heading1": "① Grade と Step の関係",
+        "diagram_heading2": "② AP と PP の考え方",
+        "diagram_heading3": "③ 昇格時の移動イメージ",
+        "diagram_help1": "下の図では、横方向が Grade、縦方向が Step です。社員は必ずどこか1つの GS に所属します。",
+        "diagram_help2": "AP は同じグレード内での毎年の昇給、PP は次グレードへ上がるときの追加昇給です。",
+        "diagram_help3": "昇格時は、最低必要額を満たす次グレードの最も近い Step に移動します。",
+        "simple_example": "初心者向けの例",
+        "simple_example_text": "例：G5A-S4 の社員が昇格する場合、まず『現在給与 + AP + PP』で最低必要額を出し、その金額以上になる G4 の最初の Step を探します。",
         "wage_heading": "賃金テーブル",
         "wage_caption": "値は直接編集できます。説明会で見せる用にも、そのまま管理用にも使えます。",
         "show_formatted": "表示用フォーマット列も見る",
@@ -110,17 +120,25 @@ LANGUAGE_PACK = {
         "download_note": "必要に応じてこのままCSV / Excelで配布できます。",
         "currency_preview": "表示例",
         "excel_unavailable": "この環境ではExcel出力が使えません。CSVを使うか、requirements.txt に openpyxl または xlsxwriter を追加してください。",
+        "table_view_mode": "表示モード",
+        "table_mode_raw": "数値のみ",
+        "table_mode_with_label": "GSラベル付き",
+        "promotion_flow": "昇格の流れ",
+        "step_search_result": "該当Stepの探索結果",
+        "legend": "凡例",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
-        "subtitle": "A complete Streamlit app for explanation, setup, table editing, and promotion simulation.",
+        "subtitle": "A complete beginner-friendly Streamlit app with visual explanation, table editing, and promotion simulation.",
         "tab_overview": "Overview",
+        "tab_diagram": "Visual Guide",
         "tab_table": "Wage Table",
         "tab_sim": "Promotion Simulation",
         "tab_admin": "Admin Settings",
         "sidebar_lang": "Language",
         "sidebar_currency": "Currency symbol",
         "sidebar_decimals": "Decimal places",
+        "sidebar_example": "GS Example",
         "overview_heading": "System Overview",
         "overview_text1": "This page explains and manages the wage table based on Grade and Step in both English and Japanese.",
         "overview_text2": "Each employee always has a Grade and a Step, abbreviated as GS. Example: G5A Step 4 is written as G5A-S4.",
@@ -140,6 +158,14 @@ LANGUAGE_PACK = {
         "glabel_G4": "Supervisor",
         "glabel_G3": "Manager",
         "glabel_G2": "Deputy General Manager",
+        "diagram_heading1": "1) Relationship between Grade and Step",
+        "diagram_heading2": "2) How AP and PP work",
+        "diagram_heading3": "3) Promotion movement image",
+        "diagram_help1": "In the chart below, Grade runs horizontally and Step runs vertically. Every employee always belongs to one GS position.",
+        "diagram_help2": "AP means annual raise within the same grade. PP means the additional raise given at promotion to the next grade.",
+        "diagram_help3": "At promotion, the employee moves to the closest step in the next grade that meets the minimum required amount.",
+        "simple_example": "Simple Example",
+        "simple_example_text": "Example: when an employee at G5A-S4 is promoted, first calculate Current Salary + AP + PP, then find the first Step in G4 that is equal to or higher than that threshold.",
         "wage_heading": "Wage Table",
         "wage_caption": "You can edit the values directly. It can be used both for presentation and management.",
         "show_formatted": "Show formatted display columns",
@@ -175,10 +201,18 @@ LANGUAGE_PACK = {
         "download_note": "You can distribute this as CSV or Excel as needed.",
         "currency_preview": "Preview",
         "excel_unavailable": "Excel export is unavailable in this environment. Please use CSV export or add openpyxl / xlsxwriter to requirements.txt.",
+        "table_view_mode": "View Mode",
+        "table_mode_raw": "Raw Numbers",
+        "table_mode_with_label": "With GS Labels",
+        "promotion_flow": "Promotion Flow",
+        "step_search_result": "Step Search Result",
+        "legend": "Legend",
     },
 }
 
-
+# =========================================================
+# Helpers
+# =========================================================
 def t(key: str) -> str:
     return LANGUAGE_PACK[st.session_state.lang][key]
 
@@ -204,7 +238,6 @@ def build_wage_table(params: Dict[str, Dict[str, float]]) -> pd.DataFrame:
 
 def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
     output = BytesIO()
-
     try:
         if OPENPYXL_AVAILABLE:
             engine = "openpyxl"
@@ -212,10 +245,8 @@ def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
             engine = "xlsxwriter"
         else:
             return None
-
         with pd.ExcelWriter(output, engine=engine) as writer:
             df.to_excel(writer, index=False, sheet_name="WageTable")
-
         output.seek(0)
         return output.getvalue()
     except Exception:
@@ -262,10 +293,72 @@ def find_promotion_result(
 def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for g in GRADES:
-        out[f"{g}_Display"] = out[g].apply(format_money)
+        out[g] = out[g].apply(format_money)
     return out
 
 
+def display_table_with_gs(df: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for _, row in df.iterrows():
+        step = int(row["Step"])
+        record = {"Step": step}
+        for g in GRADES:
+            record[g] = f"{g}-S{step} / {format_money(float(row[g]))}"
+        rows.append(record)
+    return pd.DataFrame(rows)
+
+
+def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
+    lines = []
+    lines.append("digraph G {")
+    lines.append('rankdir=LR;')
+    lines.append('node [shape=box, style="rounded,filled", fillcolor="white"];')
+    for g in GRADES:
+        lines.append(f'subgraph cluster_{g} {{ label="{g}"; style="rounded";')
+        for s in [1, 2, 3, 4, 5]:
+            node_name = f"{g}_{s}"
+            label = f"{g}-S{s}"
+            if g == selected_grade and s == selected_step:
+                lines.append(f'{node_name} [label="{label}", fillcolor="lightblue"];')
+            else:
+                lines.append(f'{node_name} [label="{label}"];')
+        lines.append("}")
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def raise_diagram() -> str:
+    return """
+    digraph G {
+      rankdir=LR;
+      node [shape=box, style="rounded,filled", fillcolor="white"];
+      A [label="Current Salary\n現在給与"];
+      B [label="+ AP\n毎年昇給"];
+      C [label="+ PP\n昇格昇給"];
+      D [label="Minimum Required\n最低必要額"];
+      E [label="Find first Step in next Grade\n次グレードで該当Stepを探す", fillcolor="lightyellow"];
+      A -> B -> C -> D -> E;
+    }
+    """
+
+
+def promotion_diagram(current_grade: str, current_step: int, next_grade: str, target_step: int) -> str:
+    return f"""
+    digraph G {{
+      rankdir=LR;
+      node [shape=box, style="rounded,filled", fillcolor="white"];
+      A [label="{current_grade}-S{current_step}\nCurrent GS", fillcolor="lightblue"];
+      B [label="AP + PP\nadded"];
+      C [label="Search next grade\n{next_grade}"];
+      D [label="{next_grade}-S{target_step}\nNew GS", fillcolor="lightgreen"];
+      A -> B -> C -> D;
+    }}
+    """
+
+
+# =========================================================
+# State
+# =========================================================
 if "lang" not in st.session_state:
     st.session_state.lang = "日本語"
 if "currency_symbol" not in st.session_state:
@@ -277,6 +370,9 @@ if "params" not in st.session_state:
 if "wage_df" not in st.session_state:
     st.session_state.wage_df = build_wage_table(st.session_state.params)
 
+# =========================================================
+# Sidebar
+# =========================================================
 st.sidebar.title("Wage Table")
 st.session_state.lang = st.sidebar.radio(
     "Language / 言語",
@@ -284,8 +380,10 @@ st.session_state.lang = st.sidebar.radio(
     index=0 if st.session_state.lang == "日本語" else 1,
 )
 
-currency_symbol = st.sidebar.text_input(t("sidebar_currency"), value=st.session_state.currency_symbol)
-st.session_state.currency_symbol = currency_symbol
+st.session_state.currency_symbol = st.sidebar.text_input(
+    t("sidebar_currency"),
+    value=st.session_state.currency_symbol,
+)
 st.session_state.decimals = st.sidebar.selectbox(
     t("sidebar_decimals"),
     [0, 1, 2],
@@ -294,29 +392,36 @@ st.session_state.decimals = st.sidebar.selectbox(
 
 st.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
 st.sidebar.markdown("---")
-st.sidebar.write("GS Example / GS例")
+st.sidebar.write(t("sidebar_example"))
 example_grade = st.sidebar.selectbox("Grade", GRADES, index=2, key="example_grade")
 example_step = st.sidebar.selectbox("Step", STEPS, index=3, key="example_step")
 st.sidebar.info(f"GS = {example_grade}-S{example_step}")
 
+# =========================================================
+# Main header
+# =========================================================
 st.title(t("title"))
 st.caption(t("subtitle"))
 
-col_top1, col_top2, col_top3 = st.columns(3)
-with col_top1:
+m1, m2, m3 = st.columns(3)
+with m1:
     st.metric("Grades", len(GRADES))
-with col_top2:
+with m2:
     st.metric("Steps", len(STEPS))
-with col_top3:
+with m3:
     st.metric("GS Patterns", len(GRADES) * len(STEPS))
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     t("tab_overview"),
+    t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
     t("tab_admin"),
 ])
 
+# =========================================================
+# Tab 1: Overview
+# =========================================================
 with tab1:
     st.subheader(t("overview_heading"))
     st.write(t("overview_text1"))
@@ -337,7 +442,43 @@ with tab1:
     st.subheader(t("grade_table"))
     st.dataframe(ref_df, use_container_width=True, hide_index=True)
 
+# =========================================================
+# Tab 2: Diagram
+# =========================================================
 with tab2:
+    st.subheader(t("diagram_heading1"))
+    st.write(t("diagram_help1"))
+    st.graphviz_chart(grade_step_grid(example_grade, min(example_step, 5)))
+
+    st.subheader(t("diagram_heading2"))
+    st.write(t("diagram_help2"))
+    st.graphviz_chart(raise_diagram())
+
+    st.subheader(t("diagram_heading3"))
+    st.write(t("diagram_help3"))
+
+    sample_result = find_promotion_result(
+        st.session_state.wage_df,
+        st.session_state.params,
+        "G5A",
+        4,
+    )
+    if sample_result:
+        st.graphviz_chart(
+            promotion_diagram(
+                "G5A",
+                4,
+                sample_result["target_grade"],
+                int(sample_result["target_step"]),
+            )
+        )
+
+    st.info(t("simple_example_text"))
+
+# =========================================================
+# Tab 3: Wage Table
+# =========================================================
+with tab3:
     st.subheader(t("wage_heading"))
     st.caption(t("wage_caption"))
 
@@ -359,9 +500,16 @@ with tab2:
     )
     st.session_state.wage_df = edited_df
 
-    show_formatted = st.checkbox(t("show_formatted"), value=False)
-    if show_formatted:
+    view_mode = st.radio(
+        t("table_view_mode"),
+        [t("table_mode_raw"), t("table_mode_with_label")],
+        horizontal=True,
+    )
+
+    if view_mode == t("table_mode_raw"):
         st.dataframe(display_table_with_formats(st.session_state.wage_df), use_container_width=True, hide_index=True)
+    else:
+        st.dataframe(display_table_with_gs(st.session_state.wage_df), use_container_width=True, hide_index=True)
 
     csv_bytes = st.session_state.wage_df.to_csv(index=False).encode("utf-8-sig")
     excel_bytes = make_excel_file(st.session_state.wage_df)
@@ -389,7 +537,10 @@ with tab2:
 
     st.caption(t("download_note"))
 
-with tab3:
+# =========================================================
+# Tab 4: Simulation
+# =========================================================
+with tab4:
     st.subheader(t("sim_heading"))
 
     c1, c2, c3 = st.columns(3)
@@ -425,35 +576,49 @@ with tab3:
 
             final_salary = result["target_salary"] + total_allowance
 
-            m1, m2, m3 = st.columns(3)
-            with m1:
+            r1, r2, r3 = st.columns(3)
+            with r1:
                 st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
-            with m2:
+            with r2:
                 st.metric(t("gs_after"), f"{result['target_grade']}-S{result['target_step']}")
-            with m3:
+            with r3:
                 st.metric(t("final_salary"), format_money(final_salary))
 
-            sim_df = pd.DataFrame([{
-                t("gs_before"): f"{current_grade}-S{current_step}",
-                t("current_salary"): result["current_salary"],
-                t("min_required"): result["minimum_required"],
-                t("promoted_grade"): result["target_grade"],
-                t("promoted_step"): result["target_step"],
-                t("promoted_salary"): result["target_salary"],
-                t("adjust_allowance"): adjustment_allowance,
-                t("univ_allowance"): university_allowance if is_univ else 0.0,
-                t("other_allowance"): other_allowance,
-                t("final_salary"): final_salary,
-            }])
-
-            st.dataframe(sim_df, use_container_width=True, hide_index=True)
-
-            st.success(
-                f"{current_grade}-S{current_step} → {result['target_grade']}-S{result['target_step']} / "
-                f"{t('final_salary')}: {format_money(final_salary)}"
+            st.subheader(t("promotion_flow"))
+            st.graphviz_chart(
+                promotion_diagram(
+                    current_grade,
+                    int(current_step),
+                    result["target_grade"],
+                    int(result["target_step"]),
+                )
             )
 
-with tab4:
+            search_df = st.session_state.wage_df[["Step", result["target_grade"]]].copy()
+            search_df["Eligible"] = search_df[result["target_grade"]] >= result["minimum_required"]
+            st.subheader(t("step_search_result"))
+            st.dataframe(search_df, use_container_width=True, hide_index=True)
+
+            sim_df = pd.DataFrame([
+                {
+                    t("gs_before"): f"{current_grade}-S{current_step}",
+                    t("current_salary"): format_money(result["current_salary"]),
+                    t("min_required"): format_money(result["minimum_required"]),
+                    t("promoted_grade"): result["target_grade"],
+                    t("promoted_step"): int(result["target_step"]),
+                    t("promoted_salary"): format_money(result["target_salary"]),
+                    t("adjust_allowance"): format_money(adjustment_allowance),
+                    t("univ_allowance"): format_money(university_allowance if is_univ else 0.0),
+                    t("other_allowance"): format_money(other_allowance),
+                    t("final_salary"): format_money(final_salary),
+                }
+            ])
+            st.dataframe(sim_df, use_container_width=True, hide_index=True)
+
+# =========================================================
+# Tab 5: Admin
+# =========================================================
+with tab5:
     st.subheader(t("admin_heading"))
     st.write(t("admin_text"))
     st.warning(t("warning_rebuild"))
@@ -501,4 +666,4 @@ with tab4:
             st.success(t("success_reset"))
 
 st.markdown("---")
-st.caption("Created for bilingual wage table explanation, editing, and promotion simulation in Streamlit.")
+st.caption("Created for bilingual wage table explanation, visual guidance, editing, and promotion simulation in Streamlit.")
