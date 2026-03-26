@@ -778,9 +778,7 @@ with tab5:
                 st.rerun()
 
             except Exception as e:
-                st.error(f"{t('csv_import_error')}
-
-Detail: {str(e)}")}")
+st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, editing, promotion simulation, and CSV import in Streamlit.")
