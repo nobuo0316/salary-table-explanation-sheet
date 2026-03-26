@@ -602,6 +602,10 @@ def is_admin_unlocked() -> bool:
     return st.session_state.get("admin_unlocked", False)
 
 
+def is_admin() -> bool:
+    return is_admin_unlocked()
+
+
 def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
     row = df.loc[df["Step"] == step]
     return float(row.iloc[0][grade])
@@ -820,6 +824,45 @@ if "employee_roster_df" not in st.session_state:
     st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
 
 # =========================================================
+# Simple visual styling
+# =========================================================
+st.markdown(
+    """
+    <style>
+    .main-card {
+        background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+        border: 1px solid #d7e7ff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
+    .info-card {
+        background: #f7fafc;
+        border-left: 5px solid #4a90e2;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    .warn-card {
+        background: #fff8e8;
+        border-left: 5px solid #f0ad4e;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    .success-card {
+        background: #eefaf1;
+        border-left: 5px solid #2e8b57;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# =========================================================
 # Login gate
 # =========================================================
 if login_enabled() and not st.session_state.logged_in:
@@ -872,8 +915,7 @@ st.sidebar.info(f"GS = {example_grade}-S{example_step}")
 # =========================================================
 # Main header
 # =========================================================
-st.title(t("title"))
-st.caption(t("subtitle"))
+st.markdown(f"<div class='main-card'><h1 style='margin-bottom:4px;'>{t('title')}</h1><div>{t('subtitle')}</div></div>", unsafe_allow_html=True)
 
 m1, m2, m3 = st.columns(3)
 with m1:
@@ -1134,32 +1176,41 @@ with tab6:
 
 with tab7:
     st.subheader(t("employee_heading"))
-    st.write(t("employee_text"))
+    st.markdown(f"<div class='info-card'>{t('employee_text')}</div>", unsafe_allow_html=True)
     template_emp_df = build_employee_csv_template()
     template_emp_csv = template_emp_df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(t("employee_template_download"), data=template_emp_csv, file_name="employee_roster_template.csv", mime="text/csv")
-    uploaded_emp_csv = st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload")
 
-    if uploaded_emp_csv is not None:
-        try:
-            uploaded_emp_csv.seek(0)
-            preview_emp_df = pd.read_csv(uploaded_emp_csv)
-            st.markdown(f"**{t('employee_preview')}**")
-            st.dataframe(preview_emp_df, use_container_width=True, hide_index=True)
-        except Exception:
-            st.error(t("employee_import_error"))
+    if not is_admin():
+        st.markdown("<div class='warn-card'>🔒 従業員名簿のアップロードと反映は管理者のみ実行できます。一般ユーザーは閲覧のみ可能です。</div>", unsafe_allow_html=True)
+        uploaded_emp_csv = None
+        st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload_disabled", disabled=True)
+        st.button(t("employee_apply"), use_container_width=True, disabled=True, key="employee_apply_disabled")
+    else:
+        uploaded_emp_csv = st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload")
 
-    if st.button(t("employee_apply"), use_container_width=True):
-        if uploaded_emp_csv is None:
-            st.warning(t("employee_import_empty"))
-        else:
+        if uploaded_emp_csv is not None:
             try:
                 uploaded_emp_csv.seek(0)
-                imported_emp_df = pd.read_csv(uploaded_emp_csv)
-                st.session_state.employee_roster_df = validate_employee_roster_csv(imported_emp_df)
-                st.success(t("employee_import_success"))
-            except Exception as e:
-                st.error(f"{t('employee_import_error')}\n\nDetail: {str(e)}")
+                preview_emp_df = pd.read_csv(uploaded_emp_csv)
+                st.markdown(f"**{t('employee_preview')}**")
+                st.dataframe(preview_emp_df, use_container_width=True, hide_index=True)
+            except Exception:
+                st.error(t("employee_import_error"))
+
+        if st.button(t("employee_apply"), use_container_width=True):
+            if uploaded_emp_csv is None:
+                st.warning(t("employee_import_empty"))
+            else:
+                try:
+                    uploaded_emp_csv.seek(0)
+                    imported_emp_df = pd.read_csv(uploaded_emp_csv)
+                    st.session_state.employee_roster_df = validate_employee_roster_csv(imported_emp_df)
+                    st.success(t("employee_import_success"))
+                except Exception as e:
+                    st.error(f"{t('employee_import_error')}
+
+Detail: {str(e)}")
 
     if not st.session_state.employee_roster_df.empty:
         active_only = st.checkbox(t("active_only"), value=True)
@@ -1208,8 +1259,8 @@ with tab7:
 
 with tab8:
     st.subheader(t("admin_heading"))
-    st.write(t("admin_text"))
-    st.warning(t("warning_rebuild"))
+    st.markdown(f"<div class='info-card'>{t('admin_text')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='warn-card'>{t('warning_rebuild')}</div>", unsafe_allow_html=True)
 
     if admin_auth_enabled() and not is_admin_unlocked():
         st.info(t("admin_locked"))
@@ -1254,34 +1305,43 @@ with tab8:
 
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
-        st.write(t("csv_import_text"))
+        st.markdown(f"<div class='info-card'>{t('csv_import_text')}</div>", unsafe_allow_html=True)
         template_df = build_settings_csv_template()
         template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(t("csv_template_download"), data=template_csv, file_name="wage_table_settings_template.csv", mime="text/csv")
-        uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
 
-        if uploaded_csv is not None:
-            try:
-                uploaded_csv.seek(0)
-                preview_df = pd.read_csv(uploaded_csv)
-                st.markdown(f"**{t('csv_preview_heading')}**")
-                st.dataframe(preview_df, use_container_width=True, hide_index=True)
-            except Exception:
-                st.error(t("csv_import_error"))
+        if not is_admin():
+            st.markdown("<div class='warn-card'>🔒 設定CSVのアップロードと反映は管理者のみ実行できます。一般ユーザーは閲覧のみ可能です。</div>", unsafe_allow_html=True)
+            uploaded_csv = None
+            st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload_disabled", disabled=True)
+            st.button(t("csv_apply"), use_container_width=True, disabled=True, key="csv_apply_disabled")
+        else:
+            uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
 
-        if st.button(t("csv_apply"), use_container_width=True):
-            if uploaded_csv is None:
-                st.warning(t("csv_import_empty"))
-            else:
+            if uploaded_csv is not None:
                 try:
                     uploaded_csv.seek(0)
-                    imported_df = pd.read_csv(uploaded_csv)
-                    new_params = validate_imported_settings_csv(imported_df)
-                    save_and_rebuild(new_params)
-                    st.success(t("csv_import_success"))
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
+                    preview_df = pd.read_csv(uploaded_csv)
+                    st.markdown(f"**{t('csv_preview_heading')}**")
+                    st.dataframe(preview_df, use_container_width=True, hide_index=True)
+                except Exception:
+                    st.error(t("csv_import_error"))
+
+            if st.button(t("csv_apply"), use_container_width=True):
+                if uploaded_csv is None:
+                    st.warning(t("csv_import_empty"))
+                else:
+                    try:
+                        uploaded_csv.seek(0)
+                        imported_df = pd.read_csv(uploaded_csv)
+                        new_params = validate_imported_settings_csv(imported_df)
+                        save_and_rebuild(new_params)
+                        st.success(t("csv_import_success"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"{t('csv_import_error')}
+
+Detail: {str(e)}")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
