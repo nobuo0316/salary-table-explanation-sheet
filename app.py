@@ -38,16 +38,6 @@ NEXT_GRADE: Dict[str, str] = {
     "G3": "G2",
     "G2": "",
 }
-
-DEFAULT_PARAMS = {
-    "G6": {"base": 18000.0, "ap": 500.0, "pp": 1500.0},
-    "G5B": {"base": 22000.0, "ap": 600.0, "pp": 1800.0},
-    "G5A": {"base": 26000.0, "ap": 700.0, "pp": 2200.0},
-    "G4": {"base": 32000.0, "ap": 800.0, "pp": 2800.0},
-    "G3": {"base": 40000.0, "ap": 1000.0, "pp": 3500.0},
-    "G2": {"base": 52000.0, "ap": 1200.0, "pp": 0.0},
-}
-
 DEFAULT_EMPLOYEE_COLUMNS = [
     "Employee ID",
     "Name",
@@ -58,11 +48,19 @@ DEFAULT_EMPLOYEE_COLUMNS = [
     "Other Allowance",
     "Active",
 ]
+DEFAULT_PARAMS = {
+    "G6": {"base": 18000.0, "ap": 500.0, "pp": 1500.0},
+    "G5B": {"base": 22000.0, "ap": 600.0, "pp": 1800.0},
+    "G5A": {"base": 26000.0, "ap": 700.0, "pp": 2200.0},
+    "G4": {"base": 32000.0, "ap": 800.0, "pp": 2800.0},
+    "G3": {"base": 40000.0, "ap": 1000.0, "pp": 3500.0},
+    "G2": {"base": 52000.0, "ap": 1200.0, "pp": 0.0},
+}
 
 LANGUAGE_PACK = {
     "日本語": {
         "title": "賃金テーブル管理・説明ページ",
-        "subtitle": "初心者向けの図解、説明、テーブル編集、昇格シミュレーションを1つにまとめた完成版です。",
+        "subtitle": "制度説明、図解、シミュレーション、名簿管理を1つにまとめたページです。",
         "login_title": "ログイン",
         "login_id": "ID",
         "login_password": "パスワード",
@@ -78,18 +76,17 @@ LANGUAGE_PACK = {
         "tab_allowance_export": "手当込みエクスポート",
         "tab_employee": "従業員名簿",
         "tab_admin": "管理設定",
-        "sidebar_lang": "表示言語",
         "sidebar_currency": "通貨記号",
         "sidebar_decimals": "小数表示",
         "sidebar_example": "GS例",
         "overview_heading": "制度概要",
-        "overview_text1": "このページでは、Grade（グレード）と Step（ステップ）に基づく賃金テーブルを、英語・日本語の両方で説明・管理できます。",
-        "overview_text2": "各社員には必ず Grade と Step があり、略して GS と表記します。例：G5A の Step 4 は G5A-S4 です。",
+        "overview_text1": "本ページでは、Grade（グレード）と Step（ステップ）に基づく賃金テーブルを、日本語・英語の両方で説明・管理できます。",
+        "overview_text2": "各社員には必ず Grade と Step があり、これを合わせて GS と表記します。例：G5A の Step 4 は G5A-S4 です。",
         "grade_axis": "横軸は Grade（G6～G2）、縦軸は Step（1～49）です。",
         "rule_heading": "基本ルール",
-        "rule_ap": "AP（Annual Pay Raise）：毎年、同一グレード内で昇給する額。",
-        "rule_pp": "PP（Pay by Promotion）：昇格時に加算される昇給額。",
-        "rule_allow": "主な手当は、調整手当と大卒手当です。将来的に追加可能です。",
+        "rule_ap": "AP（Annual Pay Raise）：毎年、同一グレード内で昇給する額です。",
+        "rule_pp": "PP（Pay by Promotion）：昇格時に加算される昇給額です。",
+        "rule_allow": "主な手当は、調整手当と大卒手当です。今後、必要に応じて追加可能です。",
         "rule_promo": "昇格時は、『現在給与 + 現在グレードの AP + 現在グレードの PP』を下回らないことを条件に、次グレードでその金額以上となる最も近い Step に移動します。",
         "grade_table": "グレード一覧",
         "grade": "グレード",
@@ -101,23 +98,37 @@ LANGUAGE_PACK = {
         "glabel_G4": "スーパーバイザー",
         "glabel_G3": "課長",
         "glabel_G2": "次長",
+        "ap_pp_heading": "昇給ルール（AP / PP一覧）",
+        "ap_label": "AP（毎年昇給）",
+        "pp_label": "PP（昇格昇給）",
+        "case_study_heading": "イメージしやすい例",
+        "case_new_grad_title": "例1：新卒社員を採用した場合",
+        "case_new_grad_text": "新卒社員は、例として G6-S1 からスタートします。その後、毎年 AP によって Step が1つずつ上がります。昇格時は、PP を加えた最低必要額を満たす次グレードの Step に移動します。",
+        "case_mid_title": "例2：スーパーバイザーレベルの中途社員を採用した場合",
+        "case_mid_text": "スーパーバイザーレベルの中途社員は、例として G4-S3 からスタートします。この場合も毎年 AP によって Step が上がり、昇格時には PP を加えた条件に基づいて次グレードの Step が決まります。",
+        "case_note": "実際のスタート位置は、経験、スキル、採用条件に応じて決定されます。ここでは制度理解のための例を示しています。",
+        "career_25_heading": "25年間のキャリア推移（モデルケース）",
+        "career_newgrad_title": "新卒採用の場合（モデルケース）",
+        "career_newgrad_text": "新卒社員は一般的に G6-S1 からスタートします。毎年、AP により Step が1段階ずつ上昇し、一定の評価および役割拡大に応じて上位 Grade へ昇格します。想定例として、入社時 G6-S1、5年目 G6-S5、6年目 G5B へ昇格、10年目 G5A へ昇格、15年目 G4 へ昇格、20年目 G3 へ昇格、25年目に G2 に到達するケースが考えられます。",
+        "career_mid_title": "中途採用（スーパーバイザー相当）の場合",
+        "career_mid_text": "スーパーバイザーレベルの中途社員は、G4帯からのスタートを想定します。初期 Grade が高いため、早期にマネジメント層へ移行する可能性があります。想定例として、入社時 G4-S3、3年目 G4-S5、4年目 G3 へ昇格、10年目 G2 へ昇格するケースが考えられます。",
+        "career_note": "上記は制度理解のためのモデルケースです。実際の昇格・昇給は、評価、役割、組織方針に基づいて決定されます。",
+        "career_diagram_heading": "キャリア推移イメージ（25年）",
         "diagram_heading1": "① Grade と Step の関係",
         "diagram_heading2": "② AP と PP の考え方",
         "diagram_heading3": "③ 昇格時の移動イメージ",
         "diagram_help1": "下の図では、横方向が Grade、縦方向が Step です。社員は必ずどこか1つの GS に所属します。",
-        "diagram_help2": "AP は同じグレード内での毎年の昇給、PP は次グレードへ上がるときの追加昇給です。",
+        "diagram_help2": "AP は同じ Grade 内での毎年の昇給、PP は次の Grade へ上がるときの追加昇給です。",
         "diagram_help3": "昇格時は、最低必要額を満たす次グレードの最も近い Step に移動します。",
-        "simple_example_text": "例：G5A-S4 の社員が昇格する場合、まず『現在給与 + AP + PP』で最低必要額を出し、その金額以上になる G4 の最初の Step を探します。",
-        "case_study_heading": "イメージしやすい例",
-        "case_new_grad_title": "例1：新卒社員を採用した場合",
-        "case_new_grad_text": "たとえば新卒社員は G6-S1 から始まるとします。その後、毎年 AP によって Step が 1 つずつ上がります。たとえば 1年後は G6-S2、2年後は G6-S3 です。その後、仕事の経験や役割が増えて昇格する場合は、PP を使って次の Grade を決めます。たとえば G6-S4 の時点で昇格する場合、G5B の中で条件を満たす最初の Step に移動します。",
-        "case_mid_title": "例2：スーパーバイザーレベルの中途社員を採用した場合",
-        "case_mid_text": "たとえばスーパーバイザーレベルの中途社員は G4-S3 から始まるとします。この場合も、毎年 AP によって同じ Grade の中で Step が上がります。たとえば 1年後は G4-S4、2年後は G4-S5 です。その後、さらに大きな役割を持つ場合は、昇格時に PP を加えて G3 の中で条件を満たす最初の Step に移動します。",
-        "case_note": "実際のスタート位置は、経験・スキル・採用条件に応じて決まります。ここでは制度の考え方をイメージしやすくするための例を示しています。",
+        "simple_example_text": "例：G5A-S4 の社員が昇格する場合、まず『現在給与 + AP + PP』で最低必要額を算出し、その金額以上となる G4 の最初の Step を探します。",
         "wage_heading": "賃金テーブル",
-        "wage_caption": "値は直接編集できます。説明会で見せる用にも、そのまま管理用にも使えます。",
+        "wage_caption": "値は直接編集できます。説明用にも管理用にも利用できます。",
+        "table_view_mode": "表示モード",
+        "table_mode_raw": "数値のみ",
+        "table_mode_with_label": "GSラベル付き",
         "download_csv": "CSVをダウンロード",
         "download_excel": "Excelをダウンロード",
+        "download_note": "必要に応じて、このまま CSV / Excel で配布できます。",
         "sim_heading": "昇格シミュレーション",
         "current_grade": "現在グレード",
         "current_step": "現在ステップ",
@@ -135,23 +146,25 @@ LANGUAGE_PACK = {
         "no_next_grade": "これ以上の次グレードはありません。",
         "gs_before": "昇格前GS",
         "gs_after": "昇格後GS",
+        "promotion_flow": "昇格の流れ",
+        "step_search_result": "該当Stepの探索結果",
         "next_year_heading": "来年昇格シミュレーション",
-        "apply_next_step": "昇格前に来年のStepアップを反映する",
+        "apply_next_step": "昇格前に来年の Step アップを反映する",
         "next_year_current_step": "来年時点の現在ステップ",
         "next_year_current_salary": "来年時点の現在給与",
-        "next_year_result": "来年昇格後のGS",
+        "next_year_result": "来年昇格後の GS",
         "allowance_export_heading": "手当込み賃金テーブル",
         "allowance_export_text": "固定額の手当を加えた賃金テーブルを表示・エクスポートできます。",
         "adjustment_allowance_export": "調整手当（固定額）",
         "university_allowance_export": "大卒手当（固定額）",
         "other_allowance_export": "その他手当（固定額）",
-        "include_university_allowance": "大卒手当を含める",
         "include_adjustment_allowance": "調整手当を含める",
+        "include_university_allowance": "大卒手当を含める",
         "include_other_allowance": "その他手当を含める",
         "export_with_allowances_csv": "手当込みCSVをダウンロード",
         "export_with_allowances_excel": "手当込みExcelをダウンロード",
         "employee_heading": "従業員名簿",
-        "employee_text": "従業員名簿をCSVで読み込み、各従業員の基本給・手当・合計支給額・来年昇格後GSを一覧化できます。",
+        "employee_text": "従業員名簿を CSV で読み込み、各従業員の基本給、手当、合計支給額、来年昇格後 GS を一覧化できます。",
         "employee_template_download": "従業員名簿テンプレートをダウンロード",
         "employee_upload": "従業員名簿CSVをアップロード",
         "employee_apply": "従業員名簿を反映",
@@ -186,14 +199,6 @@ LANGUAGE_PACK = {
         "warning_rebuild": "再生成すると、現在の手動編集内容は上書きされます。",
         "success_rebuild": "テーブルを再生成して保存しました。",
         "success_reset": "初期値に戻して保存しました。",
-        "download_note": "必要に応じてこのままCSV / Excelで配布できます。",
-        "currency_preview": "表示例",
-        "excel_unavailable": "この環境ではExcel出力が使えません。CSVを使うか、requirements.txt に openpyxl または xlsxwriter を追加してください。",
-        "table_view_mode": "表示モード",
-        "table_mode_raw": "数値のみ",
-        "table_mode_with_label": "GSラベル付き",
-        "promotion_flow": "昇格の流れ",
-        "step_search_result": "該当Stepの探索結果",
         "csv_import_heading": "設定CSVインポート",
         "csv_import_text": "この画面の設定値（Step1基準額、AP、PP）をCSVで一括更新できます。反映後、賃金テーブルも自動で再生成され、Supabase に保存されます。",
         "csv_upload": "設定CSVファイルをアップロード",
@@ -203,6 +208,8 @@ LANGUAGE_PACK = {
         "csv_import_error": "CSVの形式が正しくありません。Grade, Base, AP, PP 列が必要で、G6, G5B, G5A, G4, G3, G2 の6行が必要です。",
         "csv_import_empty": "CSVファイルを選択してください。",
         "csv_preview_heading": "CSVプレビュー",
+        "currency_preview": "表示例",
+        "excel_unavailable": "この環境ではExcel出力が使えません。CSVを使うか、requirements.txt に openpyxl または xlsxwriter を追加してください。",
         "supabase_status_ok": "Supabase接続: ON",
         "supabase_status_off": "Supabase接続: OFF（ローカル初期値を使用）",
         "supabase_save_error": "Supabase保存に失敗しました。",
@@ -211,10 +218,11 @@ LANGUAGE_PACK = {
         "admin_locked": "管理設定の変更にはパスワードが必要です。",
         "admin_unlocked": "管理ロックを解除しました。",
         "admin_password_error": "パスワードが違います。",
+        "admin_only_upload_notice": "🔒 この操作は管理者のみ実行できます。一般ユーザーは閲覧のみ可能です。",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
-        "subtitle": "A complete beginner-friendly Streamlit app with visual explanation, table editing, promotion simulation, and employee roster support.",
+        "subtitle": "A page that combines system explanation, visual guides, simulation, and roster management.",
         "login_title": "Login",
         "login_id": "ID",
         "login_password": "Password",
@@ -230,7 +238,6 @@ LANGUAGE_PACK = {
         "tab_allowance_export": "Allowance Export",
         "tab_employee": "Employee Roster",
         "tab_admin": "Admin Settings",
-        "sidebar_lang": "Language",
         "sidebar_currency": "Currency symbol",
         "sidebar_decimals": "Decimal places",
         "sidebar_example": "GS Example",
@@ -241,7 +248,7 @@ LANGUAGE_PACK = {
         "rule_heading": "Basic Rules",
         "rule_ap": "AP (Annual Pay Raise): the amount of annual raise within the same grade.",
         "rule_pp": "PP (Pay by Promotion): the additional increase applied upon promotion.",
-        "rule_allow": "Main allowances for now are Adjustment Allowance and University Graduate Allowance. More can be added later.",
+        "rule_allow": "Main allowances are Adjustment Allowance and University Graduate Allowance. Additional allowances can be added later if needed.",
         "rule_promo": "Upon promotion, the new salary must not be lower than Current Salary + current grade AP + current grade PP. The employee moves to the closest step in the next grade that meets or exceeds that amount.",
         "grade_table": "Grade Reference",
         "grade": "Grade",
@@ -253,23 +260,37 @@ LANGUAGE_PACK = {
         "glabel_G4": "Supervisor",
         "glabel_G3": "Manager",
         "glabel_G2": "Deputy General Manager",
+        "ap_pp_heading": "Raise Rules (AP / PP)",
+        "ap_label": "AP (Annual Raise)",
+        "pp_label": "PP (Promotion Raise)",
+        "case_study_heading": "Easy-to-Understand Examples",
+        "case_new_grad_title": "Case 1: When a new graduate is hired",
+        "case_new_grad_text": "A new graduate may start at G6-S1. After that, the Step increases by AP every year. At promotion, the employee moves to the first Step in the next Grade that satisfies the minimum required amount including PP.",
+        "case_mid_title": "Case 2: When a supervisor-level mid-career employee is hired",
+        "case_mid_text": "A supervisor-level mid-career hire may start at G4-S3. In the same way, the Step increases every year through AP. At promotion, the employee moves to the first Step in the next Grade that satisfies the minimum required amount including PP.",
+        "case_note": "The actual starting position depends on experience, skills, and hiring conditions. These are examples provided for easier understanding of the system.",
+        "career_25_heading": "25-Year Career Progression (Model Cases)",
+        "career_newgrad_title": "New Graduate Hire (Model Case)",
+        "career_newgrad_text": "A new graduate typically starts at G6-S1. Every year, the Step increases by one level through AP, and the employee may be promoted to a higher Grade based on evaluation and increased responsibility. A sample path could be: Start at G6-S1, Year 5 at G6-S5, Year 6 promoted to G5B, Year 10 promoted to G5A, Year 15 promoted to G4, Year 20 promoted to G3, and Year 25 potentially reaching G2.",
+        "career_mid_title": "Mid-Career Hire at Supervisor Level",
+        "career_mid_text": "A mid-career employee hired at supervisor level may start in the G4 range. Because the initial Grade is higher, transition to management levels may occur sooner. A sample path could be: Start at G4-S3, Year 3 at G4-S5, Year 4 promoted to G3, and Year 10 promoted to G2.",
+        "career_note": "These are model cases for explanation purposes. Actual salary increases and promotions are determined based on evaluation, role, and company policy.",
+        "career_diagram_heading": "Career Progression Image (25 Years)",
         "diagram_heading1": "1) Relationship between Grade and Step",
         "diagram_heading2": "2) How AP and PP work",
         "diagram_heading3": "3) Promotion movement image",
         "diagram_help1": "In the chart below, Grade runs horizontally and Step runs vertically. Every employee always belongs to one GS position.",
-        "diagram_help2": "AP means annual raise within the same grade. PP means the additional raise given at promotion to the next grade.",
+        "diagram_help2": "AP means annual raise within the same grade. PP means the additional raise given when moving to the next grade.",
         "diagram_help3": "At promotion, the employee moves to the closest step in the next grade that meets the minimum required amount.",
         "simple_example_text": "Example: when an employee at G5A-S4 is promoted, first calculate Current Salary + AP + PP, then find the first Step in G4 that is equal to or higher than that threshold.",
-        "case_study_heading": "Easy-to-Understand Examples",
-        "case_new_grad_title": "Case 1: When a new graduate is hired",
-        "case_new_grad_text": "For example, a new graduate may start at G6-S1. After that, the Step increases by AP every year. For example, after one year the employee may move to G6-S2, and after two years to G6-S3. Later, when the employee is promoted, PP is used to determine the move to the next Grade. For example, if promotion happens at G6-S4, the employee moves to the first Step in G5B that meets the required amount.",
-        "case_mid_title": "Case 2: When a mid-career supervisor-level employee is hired",
-        "case_mid_text": "For example, a supervisor-level mid-career hire may start at G4-S3. In the same way, the Step increases within the same Grade by AP each year. For example, after one year the employee may move to G4-S4, and after two years to G4-S5. Later, if the employee takes on a bigger role, PP is added and the employee moves to the first Step in G3 that meets the required amount.",
-        "case_note": "The actual starting position depends on experience, skills, and hiring conditions. These are only sample cases to help explain the system.",
         "wage_heading": "Wage Table",
-        "wage_caption": "You can edit the values directly. It can be used both for presentation and management.",
+        "wage_caption": "Values can be edited directly. The table can be used both for explanation and administration.",
+        "table_view_mode": "View Mode",
+        "table_mode_raw": "Raw Numbers",
+        "table_mode_with_label": "With GS Labels",
         "download_csv": "Download CSV",
         "download_excel": "Download Excel",
+        "download_note": "You can distribute this as CSV or Excel as needed.",
         "sim_heading": "Promotion Simulation",
         "current_grade": "Current Grade",
         "current_step": "Current Step",
@@ -287,6 +308,8 @@ LANGUAGE_PACK = {
         "no_next_grade": "No higher grade is available.",
         "gs_before": "Current GS",
         "gs_after": "New GS",
+        "promotion_flow": "Promotion Flow",
+        "step_search_result": "Step Search Result",
         "next_year_heading": "Next-Year Promotion Simulation",
         "apply_next_step": "Apply next year's step-up before promotion",
         "next_year_current_step": "Next-year current step",
@@ -297,8 +320,8 @@ LANGUAGE_PACK = {
         "adjustment_allowance_export": "Adjustment allowance (fixed)",
         "university_allowance_export": "University allowance (fixed)",
         "other_allowance_export": "Other allowance (fixed)",
-        "include_university_allowance": "Include university allowance",
         "include_adjustment_allowance": "Include adjustment allowance",
+        "include_university_allowance": "Include university allowance",
         "include_other_allowance": "Include other allowance",
         "export_with_allowances_csv": "Download allowance CSV",
         "export_with_allowances_excel": "Download allowance Excel",
@@ -338,14 +361,6 @@ LANGUAGE_PACK = {
         "warning_rebuild": "Rebuilding will overwrite current manual edits.",
         "success_rebuild": "The wage table was rebuilt and saved.",
         "success_reset": "Defaults were restored and saved.",
-        "download_note": "You can distribute this as CSV or Excel as needed.",
-        "currency_preview": "Preview",
-        "excel_unavailable": "Excel export is unavailable in this environment. Please use CSV export or add openpyxl / xlsxwriter to requirements.txt.",
-        "table_view_mode": "View Mode",
-        "table_mode_raw": "Raw Numbers",
-        "table_mode_with_label": "With GS Labels",
-        "promotion_flow": "Promotion Flow",
-        "step_search_result": "Step Search Result",
         "csv_import_heading": "Settings CSV Import",
         "csv_import_text": "You can bulk update the settings shown on this screen (Base at Step 1, AP, and PP) by CSV. After import, the wage table is regenerated and saved to Supabase.",
         "csv_upload": "Upload settings CSV file",
@@ -355,6 +370,8 @@ LANGUAGE_PACK = {
         "csv_import_error": "The CSV format is invalid. The file must contain Grade, Base, AP, and PP columns, with 6 rows for G6, G5B, G5A, G4, G3, and G2.",
         "csv_import_empty": "Please choose a CSV file first.",
         "csv_preview_heading": "CSV Preview",
+        "currency_preview": "Preview",
+        "excel_unavailable": "Excel export is unavailable in this environment. Please use CSV export or add openpyxl / xlsxwriter to requirements.txt.",
         "supabase_status_ok": "Supabase connection: ON",
         "supabase_status_off": "Supabase connection: OFF (using local defaults)",
         "supabase_save_error": "Failed to save to Supabase.",
@@ -363,6 +380,7 @@ LANGUAGE_PACK = {
         "admin_locked": "A password is required to change admin settings.",
         "admin_unlocked": "Admin is unlocked.",
         "admin_password_error": "Incorrect password.",
+        "admin_only_upload_notice": "🔒 This action is available to administrators only. General users can view data only.",
     },
 }
 
@@ -378,7 +396,10 @@ def grade_label(grade: str) -> str:
 def format_money(value: float) -> str:
     decimals = st.session_state.decimals
     symbol = st.session_state.currency_symbol
-    return f"{symbol}{value:,.{decimals}f}"
+    try:
+        return f"{symbol}{float(value):,.{decimals}f}"
+    except Exception:
+        return "-"
 
 
 def get_login_users() -> Dict[str, str]:
@@ -424,15 +445,10 @@ def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
 
 
 def build_settings_csv_template() -> pd.DataFrame:
-    rows = []
-    for g in GRADES:
-        rows.append({
-            "Grade": g,
-            "Base": float(DEFAULT_PARAMS[g]["base"]),
-            "AP": float(DEFAULT_PARAMS[g]["ap"]),
-            "PP": float(DEFAULT_PARAMS[g]["pp"]),
-        })
-    return pd.DataFrame(rows)
+    return pd.DataFrame([
+        {"Grade": g, "Base": DEFAULT_PARAMS[g]["base"], "AP": DEFAULT_PARAMS[g]["ap"], "PP": DEFAULT_PARAMS[g]["pp"]}
+        for g in GRADES
+    ])
 
 
 def build_employee_csv_template() -> pd.DataFrame:
@@ -462,13 +478,13 @@ def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, floa
     new_params: Dict[str, Dict[str, float]] = {}
     for i, row in df.iterrows():
         try:
-            grade = row["Grade"]
-            base = float(row["Base"])
-            ap = float(row["AP"])
-            pp = float(row["PP"])
+            new_params[str(row["Grade"])] = {
+                "base": float(row["Base"]),
+                "ap": float(row["AP"]),
+                "pp": float(row["PP"]),
+            }
         except Exception as exc:
             raise ValueError(f"Row {i + 1}: Base/AP/PP must be numeric") from exc
-        new_params[grade] = {"base": base, "ap": ap, "pp": pp}
     return new_params
 
 
@@ -495,26 +511,20 @@ def validate_employee_roster_csv(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def params_to_rows(params: Dict[str, Dict[str, float]]) -> List[Dict[str, float]]:
-    rows = []
-    for grade in GRADES:
-        rows.append({
-            "grade": grade,
-            "base": float(params[grade]["base"]),
-            "ap": float(params[grade]["ap"]),
-            "pp": float(params[grade]["pp"]),
-        })
-    return rows
+    return [
+        {"grade": g, "base": float(params[g]["base"]), "ap": float(params[g]["ap"]), "pp": float(params[g]["pp"])}
+        for g in GRADES
+    ]
 
 
 def rows_to_params(rows: List[Dict[str, float]]) -> Dict[str, Dict[str, float]]:
     rows_by_grade = {row["grade"]: row for row in rows}
     params: Dict[str, Dict[str, float]] = {}
-    for grade in GRADES:
-        row = rows_by_grade[grade]
-        params[grade] = {
-            "base": float(row["base"]),
-            "ap": float(row["ap"]),
-            "pp": float(row["pp"]),
+    for g in GRADES:
+        params[g] = {
+            "base": float(rows_by_grade[g]["base"]),
+            "ap": float(rows_by_grade[g]["ap"]),
+            "pp": float(rows_by_grade[g]["pp"]),
         }
     return params
 
@@ -543,10 +553,10 @@ def supabase_request(method: str, path: str, body: Optional[object] = None, quer
         "Authorization": f"Bearer {config['key']}",
         "Content-Type": "application/json",
     }
-    if method in ("POST", "PATCH"):
-        headers["Prefer"] = "return=representation"
     if method == "POST":
         headers["Prefer"] = "resolution=merge-duplicates,return=representation"
+    elif method in ("PATCH",):
+        headers["Prefer"] = "return=representation"
 
     data = None
     if body is not None:
@@ -582,9 +592,8 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
     config = get_supabase_config()
     if config is None:
         return
-    rows = params_to_rows(params)
     try:
-        supabase_request(method="POST", path=config["table"], body=rows, query={"on_conflict": "grade"})
+        supabase_request(method="POST", path=config["table"], body=params_to_rows(params), query={"on_conflict": "grade"})
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
         raise RuntimeError(detail) from exc
@@ -615,20 +624,16 @@ def find_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]],
     next_grade = NEXT_GRADE[current_grade]
     if not next_grade:
         return None
-
     current_salary = get_current_salary(df, current_grade, current_step)
     minimum_required = current_salary + params[current_grade]["ap"] + params[current_grade]["pp"]
-
     next_rows = df[["Step", next_grade]].copy()
     eligible = next_rows[next_rows[next_grade] >= minimum_required]
-
     if eligible.empty:
         target_step = int(next_rows.iloc[-1]["Step"])
         target_salary = float(next_rows.iloc[-1][next_grade])
     else:
         target_step = int(eligible.iloc[0]["Step"])
         target_salary = float(eligible.iloc[0][next_grade])
-
     return {
         "current_salary": current_salary,
         "minimum_required": minimum_required,
@@ -662,7 +667,6 @@ def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adj
         allowance_total += university_amount
     if include_other:
         allowance_total += other_amount
-
     for g in GRADES:
         out[g] = pd.to_numeric(out[g], errors="coerce")
     out["Allowance Total"] = allowance_total
@@ -683,14 +687,12 @@ def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, param
         university_allowance = float(university_allowance_amount if university_flag == 1 else 0.0)
         total_allowance = adjustment_allowance + other_allowance + university_allowance
         total_pay = basic_pay + total_allowance
-
         next_year = find_next_year_promotion_result(wage_df, params, grade, step, apply_next_step=apply_next_step)
         next_year_gs = "-"
         next_year_basic = None
         if next_year is not None:
             next_year_gs = f"{next_year['target_grade']}-S{next_year['target_step']}"
             next_year_basic = float(next_year["target_salary"])
-
         rows.append({
             t("employee_id"): str(row["Employee ID"]),
             t("employee_name"): str(row["Name"]),
@@ -734,18 +736,14 @@ def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
     lines.append("rankdir=TB;")
     lines.append('graph [nodesep="0.25", ranksep="0.35"];')
     lines.append('node [shape="box", style="rounded,filled", fillcolor="white", width="1.0", height="0.5", fontsize="10"];')
-
-    # Header row for grades
-    grade_headers = []
+    headers = []
     for g in GRADES:
-        header_name = f"header_{g}"
-        lines.append(f'{header_name} [label="{g}", shape="plaintext", fontsize="12"];')
-        grade_headers.append(header_name)
-    lines.append("{ rank=same; " + "; ".join(grade_headers) + "; }")
-
-    # Step rows from S1 to S5, arranged horizontally to use width efficiently
+        header = f"header_{g}"
+        lines.append(f'{header} [label="{g}", shape="plaintext", fontsize="12"];')
+        headers.append(header)
+    lines.append("{ rank=same; " + "; ".join(headers) + "; }")
     for s in range(1, 6):
-        same_rank_nodes = []
+        row_nodes = []
         for g in GRADES:
             node_name = f"{g}_{s}"
             label = f"{g}-S{s}"
@@ -753,15 +751,12 @@ def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
                 lines.append(f'{node_name} [label="{label}", fillcolor="lightblue"];')
             else:
                 lines.append(f'{node_name} [label="{label}"];')
-            same_rank_nodes.append(node_name)
-        lines.append("{ rank=same; " + "; ".join(same_rank_nodes) + "; }")
-
-    # Keep each grade vertically aligned under its header
+            row_nodes.append(node_name)
+        lines.append("{ rank=same; " + "; ".join(row_nodes) + "; }")
     for g in GRADES:
         chain = [f"header_{g}"] + [f"{g}_{s}" for s in range(1, 6)]
         for i in range(len(chain) - 1):
-            lines.append(f'{chain[i]} -> {chain[i+1]} [style="invis", weight=10];')
-
+            lines.append(f'{chain[i]} -> {chain[i + 1]} [style="invis", weight=10];')
     lines.append("}")
     return "\n".join(lines)
 
@@ -772,8 +767,8 @@ def raise_diagram() -> str:
       rankdir=LR;
       node [shape="box", style="rounded,filled", fillcolor="white"];
       A [label="Current Salary\n現在給与"];
-      B [label="+ AP\n毎年昇給"];
-      C [label="+ PP\n昇格昇給"];
+      B [label="+ AP\nAnnual Raise"];
+      C [label="+ PP\nPromotion Raise"];
       D [label="Minimum Required\n最低必要額"];
       E [label="Find first Step in next Grade\n次グレードで該当Stepを探す", fillcolor="lightyellow"];
       A -> B -> C -> D -> E;
@@ -802,7 +797,7 @@ def save_and_rebuild(params: Dict[str, Dict[str, float]]) -> None:
 
 
 # =========================================================
-# State
+# Session state
 # =========================================================
 if "lang" not in st.session_state:
     st.session_state.lang = "日本語"
@@ -850,13 +845,6 @@ st.markdown(
         padding: 12px 14px;
         margin-bottom: 12px;
     }
-    .success-card {
-        background: #eefaf1;
-        border-left: 5px solid #2e8b57;
-        border-radius: 10px;
-        padding: 12px 14px;
-        margin-bottom: 12px;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -888,7 +876,6 @@ st.session_state.lang = st.sidebar.radio(
     ["日本語", "English"],
     index=0 if st.session_state.lang == "日本語" else 1,
 )
-
 st.session_state.currency_symbol = st.sidebar.text_input(t("sidebar_currency"), value=st.session_state.currency_symbol)
 st.session_state.decimals = st.sidebar.selectbox(t("sidebar_decimals"), [0, 1, 2], index=[0, 1, 2].index(st.session_state.decimals))
 
@@ -936,6 +923,9 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     t("tab_admin"),
 ])
 
+# =========================================================
+# Tab 1: Overview
+# =========================================================
 with tab1:
     st.subheader(t("overview_heading"))
     st.write(t("overview_text1"))
@@ -955,6 +945,13 @@ with tab1:
     st.subheader(t("grade_table"))
     st.dataframe(ref_df, use_container_width=True, hide_index=True)
 
+    st.subheader(t("ap_pp_heading"))
+    ap_pp_df = pd.DataFrame([
+        {t("grade"): g, t("ap_label"): format_money(st.session_state.params[g]["ap"]), t("pp_label"): format_money(st.session_state.params[g]["pp"])}
+        for g in GRADES
+    ])
+    st.dataframe(ap_pp_df, use_container_width=True, hide_index=True)
+
     st.subheader(t("case_study_heading"))
     with st.container(border=True):
         st.markdown(f"**{t('case_new_grad_title')}**")
@@ -964,73 +961,51 @@ with tab1:
         st.write(t("case_mid_text"))
     st.caption(t("case_note"))
 
-    # ============================
-    # 25年キャリア説明（追加）
-    # ============================
-    st.subheader("25年間のキャリア推移（モデルケース）")
+    st.subheader(t("career_25_heading"))
+    with st.container(border=True):
+        st.markdown(f"**{t('career_newgrad_title')}**")
+        st.write(t("career_newgrad_text"))
+    with st.container(border=True):
+        st.markdown(f"**{t('career_mid_title')}**")
+        st.write(t("career_mid_text"))
+    st.info(t("career_note"))
 
-    st.markdown("### ■ 新卒採用の場合（モデルケース）")
-    st.write("""
-新卒社員は、一般的に G6-S1 からスタートします。
+    st.subheader(t("career_diagram_heading"))
+    if st.session_state.lang == "日本語":
+        label_start = "入社"
+        label_5 = "5年"
+        label_10 = "10年"
+        label_15 = "15年"
+        label_20 = "20年"
+        label_25 = "25年"
+        label_promo = "昇格"
+    else:
+        label_start = "Start"
+        label_5 = "Year 5"
+        label_10 = "Year 10"
+        label_15 = "Year 15"
+        label_20 = "Year 20"
+        label_25 = "Year 25"
+        label_promo = "Promotion"
 
-・毎年、AP（定期昇給）により Step が1段階ずつ上昇します。
-・一定の評価および役割拡大に応じて、上位Gradeへ昇格します。
-
-【想定例】
-・入社時：G6-S1
-・5年目：G6-S5
-・6年目：G5Bへ昇格
-・10年目：G5Aへ昇格
-・15年目：G4へ昇格
-・20年目：G3へ昇格
-・25年目：G2到達（想定）
-
-本制度では、Stepによる継続的な昇給と、Grade昇格による報酬レンジの上昇を組み合わせてキャリア形成を行います。
-""")
-
-    st.markdown("### ■ 中途採用（スーパーバイザー相当）の場合")
-    st.write("""
-スーパーバイザーレベルの中途社員は、G4帯からのスタートを想定します。
-
-・初期Gradeが高いため、早期にマネジメント層へ移行するケースが想定されます。
-
-【想定例】
-・入社時：G4-S3
-・3年目：G4-S5
-・4年目：G3へ昇格
-・10年目：G2へ昇格
-
-中途社員は、既存スキル・経験を踏まえた初期配置となるため、新卒と比較して昇格までの期間が短縮される傾向があります。
-""")
-
-    st.info("※ 上記は制度理解のためのモデルケースであり、実際の昇格・昇給は評価、役割、組織方針により決定されます。")
-
-    st.subheader("キャリア推移イメージ（25年）")
-
-    st.graphviz_chart("""
-    digraph G {
+    st.graphviz_chart(f"""
+    digraph G {{
         rankdir=LR;
-        node [shape="box", style="rounded,filled", fillcolor=white];
-
-        N1 [label="G6-S1
-入社"];
-        N2 [label="G6-S5
-5年"];
-        N3 [label="G5B
-昇格"];
-        N4 [label="G5A
-10年"];
-        N5 [label="G4
-15年"];
-        N6 [label="G3
-20年"];
-        N7 [label="G2
-25年", fillcolor=lightgreen];
-
+        node [shape="box", style="rounded,filled", fillcolor="white"];
+        N1 [label="G6-S1\\n{label_start}"];
+        N2 [label="G6-S5\\n{label_5}"];
+        N3 [label="G5B\\n{label_promo}"];
+        N4 [label="G5A\\n{label_10}"];
+        N5 [label="G4\\n{label_15}"];
+        N6 [label="G3\\n{label_20}"];
+        N7 [label="G2\\n{label_25}", fillcolor="lightgreen"];
         N1 -> N2 -> N3 -> N4 -> N5 -> N6 -> N7;
-    }
+    }}
     """)
 
+# =========================================================
+# Tab 2: Diagrams
+# =========================================================
 with tab2:
     st.subheader(t("diagram_heading1"))
     st.write(t("diagram_help1"))
@@ -1045,6 +1020,9 @@ with tab2:
         st.graphviz_chart(promotion_diagram("G5A", 4, sample_result["target_grade"], int(sample_result["target_step"])))
     st.info(t("simple_example_text"))
 
+# =========================================================
+# Tab 3: Wage table
+# =========================================================
 with tab3:
     st.subheader(t("wage_heading"))
     st.caption(t("wage_caption"))
@@ -1055,23 +1033,16 @@ with tab3:
         hide_index=True,
         column_config={
             "Step": st.column_config.NumberColumn("Step", disabled=True),
-            "G6": st.column_config.NumberColumn("G6", format="%.2f"),
-            "G5B": st.column_config.NumberColumn("G5B", format="%.2f"),
-            "G5A": st.column_config.NumberColumn("G5A", format="%.2f"),
-            "G4": st.column_config.NumberColumn("G4", format="%.2f"),
-            "G3": st.column_config.NumberColumn("G3", format="%.2f"),
-            "G2": st.column_config.NumberColumn("G2", format="%.2f"),
+            **{g: st.column_config.NumberColumn(g, format="%.2f") for g in GRADES},
         },
         key="wage_table_editor",
     )
     st.session_state.wage_df = edited_df
-
     view_mode = st.radio(t("table_view_mode"), [t("table_mode_raw"), t("table_mode_with_label")], horizontal=True)
     if view_mode == t("table_mode_raw"):
         st.dataframe(display_table_with_formats(st.session_state.wage_df), use_container_width=True, hide_index=True)
     else:
         st.dataframe(display_table_with_gs(st.session_state.wage_df), use_container_width=True, hide_index=True)
-
     csv_bytes = st.session_state.wage_df.to_csv(index=False).encode("utf-8-sig")
     excel_bytes = make_excel_file(st.session_state.wage_df)
     d1, d2 = st.columns(2)
@@ -1084,6 +1055,9 @@ with tab3:
             st.info(t("excel_unavailable"))
     st.caption(t("download_note"))
 
+# =========================================================
+# Tab 4: Promotion simulation
+# =========================================================
 with tab4:
     st.subheader(t("sim_heading"))
     c1, c2, c3 = st.columns(3)
@@ -1093,7 +1067,6 @@ with tab4:
         current_step = st.selectbox(t("current_step"), STEPS, index=0)
     with c3:
         is_univ = st.checkbox(t("is_univ"), value=False)
-
     a1, a2, a3 = st.columns(3)
     with a1:
         adjustment_allowance = st.number_input(t("adjust_allowance"), min_value=0.0, value=0.0, step=100.0)
@@ -1101,7 +1074,6 @@ with tab4:
         university_allowance = st.number_input(t("univ_allowance"), min_value=0.0, value=0.0, step=100.0)
     with a3:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
-
     if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
         result = find_promotion_result(st.session_state.wage_df, st.session_state.params, current_grade, int(current_step))
         if result is None:
@@ -1123,6 +1095,9 @@ with tab4:
             st.subheader(t("step_search_result"))
             st.dataframe(search_df, use_container_width=True, hide_index=True)
 
+# =========================================================
+# Tab 5: Next year simulation
+# =========================================================
 with tab5:
     st.subheader(t("next_year_heading"))
     ny1, ny2, ny3 = st.columns(3)
@@ -1132,7 +1107,6 @@ with tab5:
         next_year_step = st.selectbox(t("current_step"), STEPS, index=0, key="next_year_step")
     with ny3:
         apply_next_step_flag = st.checkbox(t("apply_next_step"), value=True)
-
     if st.button(t("simulate"), use_container_width=True, key="simulate_next_year"):
         next_year_result = find_next_year_promotion_result(st.session_state.wage_df, st.session_state.params, next_year_grade, int(next_year_step), apply_next_step=apply_next_step_flag)
         if next_year_result is None:
@@ -1147,6 +1121,9 @@ with tab5:
                 st.metric(t("next_year_result"), f"{next_year_result['target_grade']}-S{next_year_result['target_step']}")
             st.graphviz_chart(promotion_diagram(next_year_grade, int(next_year_result["next_year_current_step"]), next_year_result["target_grade"], int(next_year_result["target_step"])))
 
+# =========================================================
+# Tab 6: Allowance export
+# =========================================================
 with tab6:
     st.subheader(t("allowance_export_heading"))
     st.write(t("allowance_export_text"))
@@ -1160,7 +1137,6 @@ with tab6:
     with ex3:
         include_other = st.checkbox(t("include_other_allowance"), value=False)
         other_amount = st.number_input(t("other_allowance_export"), min_value=0.0, value=0.0, step=100.0)
-
     allowance_export_df = build_allowance_export_table(st.session_state.wage_df, include_adjustment, adjustment_amount, include_university, university_amount, include_other, other_amount)
     st.dataframe(allowance_export_df, use_container_width=True, hide_index=True)
     allowance_csv = allowance_export_df.to_csv(index=False).encode("utf-8-sig")
@@ -1174,21 +1150,22 @@ with tab6:
         else:
             st.info(t("excel_unavailable"))
 
+# =========================================================
+# Tab 7: Employee roster
+# =========================================================
 with tab7:
     st.subheader(t("employee_heading"))
     st.markdown(f"<div class='info-card'>{t('employee_text')}</div>", unsafe_allow_html=True)
-    template_emp_df = build_employee_csv_template()
-    template_emp_csv = template_emp_df.to_csv(index=False).encode("utf-8-sig")
+    template_emp_csv = build_employee_csv_template().to_csv(index=False).encode("utf-8-sig")
     st.download_button(t("employee_template_download"), data=template_emp_csv, file_name="employee_roster_template.csv", mime="text/csv")
 
+    uploaded_emp_csv = None
     if not is_admin():
-        st.markdown("<div class='warn-card'>🔒 従業員名簿のアップロードと反映は管理者のみ実行できます。一般ユーザーは閲覧のみ可能です。</div>", unsafe_allow_html=True)
-        uploaded_emp_csv = None
+        st.markdown(f"<div class='warn-card'>{t('admin_only_upload_notice')}</div>", unsafe_allow_html=True)
         st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload_disabled", disabled=True)
         st.button(t("employee_apply"), use_container_width=True, disabled=True, key="employee_apply_disabled")
     else:
         uploaded_emp_csv = st.file_uploader(t("employee_upload"), type=["csv"], key="employee_csv_upload")
-
         if uploaded_emp_csv is not None:
             try:
                 uploaded_emp_csv.seek(0)
@@ -1197,7 +1174,6 @@ with tab7:
                 st.dataframe(preview_emp_df, use_container_width=True, hide_index=True)
             except Exception:
                 st.error(t("employee_import_error"))
-
         if st.button(t("employee_apply"), use_container_width=True):
             if uploaded_emp_csv is None:
                 st.warning(t("employee_import_empty"))
@@ -1214,7 +1190,6 @@ with tab7:
         active_only = st.checkbox(t("active_only"), value=True)
         roster_university_allowance = st.number_input(t("default_university_allowance"), min_value=0.0, value=0.0, step=100.0)
         roster_apply_next_step = st.checkbox(t("apply_next_step"), value=True, key="roster_apply_next_step")
-
         payroll_df = build_employee_payroll(
             st.session_state.employee_roster_df,
             st.session_state.wage_df,
@@ -1222,11 +1197,9 @@ with tab7:
             university_allowance_amount=roster_university_allowance,
             apply_next_step=roster_apply_next_step,
         )
-
         if active_only:
             active_mask = st.session_state.employee_roster_df["Active"].astype(int).tolist()
             payroll_df = payroll_df[[a == 1 for a in active_mask]].reset_index(drop=True)
-
         display_payroll_df = payroll_df.copy()
         money_cols = [
             t("employee_basic_pay"),
@@ -1242,7 +1215,6 @@ with tab7:
                 display_payroll_df[col] = display_payroll_df[col].apply(lambda x: format_money(x) if pd.notna(x) else "-")
         if "_active" in display_payroll_df.columns:
             display_payroll_df = display_payroll_df.drop(columns=["_active"])
-
         st.dataframe(display_payroll_df, use_container_width=True, hide_index=True)
         emp_csv = payroll_df.drop(columns=["_active"]).to_csv(index=False).encode("utf-8-sig")
         emp_excel = make_excel_file(payroll_df.drop(columns=["_active"]))
@@ -1255,6 +1227,9 @@ with tab7:
             else:
                 st.info(t("excel_unavailable"))
 
+# =========================================================
+# Tab 8: Admin
+# =========================================================
 with tab8:
     st.subheader(t("admin_heading"))
     st.markdown(f"<div class='info-card'>{t('admin_text')}</div>", unsafe_allow_html=True)
@@ -1281,7 +1256,6 @@ with tab8:
                 ap = st.number_input(f"{g} - {t('ap')}", min_value=0.0, value=float(st.session_state.params[g]["ap"]), step=50.0, key=f"ap_{g}")
                 pp = st.number_input(f"{g} - {t('pp')}", min_value=0.0, value=float(st.session_state.params[g]["pp"]), step=50.0, key=f"pp_{g}")
                 tmp_params[g] = {"base": base, "ap": ap, "pp": pp}
-
         b1, b2 = st.columns(2)
         with b1:
             if st.button(t("rebuild"), use_container_width=True):
@@ -1304,18 +1278,16 @@ with tab8:
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
         st.markdown(f"<div class='info-card'>{t('csv_import_text')}</div>", unsafe_allow_html=True)
-        template_df = build_settings_csv_template()
-        template_csv = template_df.to_csv(index=False).encode("utf-8-sig")
+        template_csv = build_settings_csv_template().to_csv(index=False).encode("utf-8-sig")
         st.download_button(t("csv_template_download"), data=template_csv, file_name="wage_table_settings_template.csv", mime="text/csv")
 
+        uploaded_csv = None
         if not is_admin():
-            st.markdown("<div class='warn-card'>🔒 設定CSVのアップロードと反映は管理者のみ実行できます。一般ユーザーは閲覧のみ可能です。</div>", unsafe_allow_html=True)
-            uploaded_csv = None
+            st.markdown(f"<div class='warn-card'>{t('admin_only_upload_notice')}</div>", unsafe_allow_html=True)
             st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload_disabled", disabled=True)
             st.button(t("csv_apply"), use_container_width=True, disabled=True, key="csv_apply_disabled")
         else:
             uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
-
             if uploaded_csv is not None:
                 try:
                     uploaded_csv.seek(0)
@@ -1324,23 +1296,19 @@ with tab8:
                     st.dataframe(preview_df, use_container_width=True, hide_index=True)
                 except Exception:
                     st.error(t("csv_import_error"))
-
-if st.button(t("csv_apply"), use_container_width=True):
-    if uploaded_csv is None:
-        st.warning(t("csv_import_empty"))
-    else:
-        try:
-            uploaded_csv.seek(0)
-            imported_df = pd.read_csv(uploaded_csv)
-
-            new_params = validate_imported_settings_csv(imported_df)
-            save_and_rebuild(new_params)
-
-            st.success(t("csv_import_success"))
-            st.rerun()
-
-        except Exception as e:
-            st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
+            if st.button(t("csv_apply"), use_container_width=True):
+                if uploaded_csv is None:
+                    st.warning(t("csv_import_empty"))
+                else:
+                    try:
+                        uploaded_csv.seek(0)
+                        imported_df = pd.read_csv(uploaded_csv)
+                        new_params = validate_imported_settings_csv(imported_df)
+                        save_and_rebuild(new_params)
+                        st.success(t("csv_import_success"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
