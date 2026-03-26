@@ -1208,9 +1208,7 @@ with tab7:
                     st.session_state.employee_roster_df = validate_employee_roster_csv(imported_emp_df)
                     st.success(t("employee_import_success"))
                 except Exception as e:
-                    st.error(f"{t('employee_import_error')}
-
-Detail: {str(e)}")
+                    st.error(f"{t('employee_import_error')}\n\nDetail: {str(e)}")
 
     if not st.session_state.employee_roster_df.empty:
         active_only = st.checkbox(t("active_only"), value=True)
