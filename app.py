@@ -715,18 +715,37 @@ def display_table_with_gs(df: pd.DataFrame) -> pd.DataFrame:
 def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
     lines = []
     lines.append("digraph G {")
-    lines.append("rankdir=LR;")
-    lines.append('node [shape="box", style="rounded,filled", fillcolor="white"];')
+    lines.append("rankdir=TB;")
+    lines.append('graph [nodesep="0.25", ranksep="0.35"];')
+    lines.append('node [shape="box", style="rounded,filled", fillcolor="white", width="1.0", height="0.5", fontsize="10"];')
+
+    # Header row for grades
+    grade_headers = []
     for g in GRADES:
-        lines.append(f'subgraph cluster_{g} {{ label="{g}"; style="rounded";')
-        for s in [1, 2, 3, 4, 5]:
+        header_name = f"header_{g}"
+        lines.append(f'{header_name} [label="{g}", shape="plaintext", fontsize="12"];')
+        grade_headers.append(header_name)
+    lines.append("{ rank=same; " + "; ".join(grade_headers) + "; }")
+
+    # Step rows from S1 to S5, arranged horizontally to use width efficiently
+    for s in range(1, 6):
+        same_rank_nodes = []
+        for g in GRADES:
             node_name = f"{g}_{s}"
             label = f"{g}-S{s}"
             if g == selected_grade and s == selected_step:
                 lines.append(f'{node_name} [label="{label}", fillcolor="lightblue"];')
             else:
                 lines.append(f'{node_name} [label="{label}"];')
-        lines.append("}")
+            same_rank_nodes.append(node_name)
+        lines.append("{ rank=same; " + "; ".join(same_rank_nodes) + "; }")
+
+    # Keep each grade vertically aligned under its header
+    for g in GRADES:
+        chain = [f"header_{g}"] + [f"{g}_{s}" for s in range(1, 6)]
+        for i in range(len(chain) - 1):
+            lines.append(f'{chain[i]} -> {chain[i+1]} [style="invis", weight=10];')
+
     lines.append("}")
     return "\n".join(lines)
 
