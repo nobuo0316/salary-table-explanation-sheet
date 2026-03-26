@@ -108,6 +108,12 @@ LANGUAGE_PACK = {
         "diagram_help2": "AP は同じグレード内での毎年の昇給、PP は次グレードへ上がるときの追加昇給です。",
         "diagram_help3": "昇格時は、最低必要額を満たす次グレードの最も近い Step に移動します。",
         "simple_example_text": "例：G5A-S4 の社員が昇格する場合、まず『現在給与 + AP + PP』で最低必要額を出し、その金額以上になる G4 の最初の Step を探します。",
+        "case_study_heading": "イメージしやすい例",
+        "case_new_grad_title": "例1：新卒社員を採用した場合",
+        "case_new_grad_text": "たとえば新卒社員は G6-S1 から始まるとします。その後、毎年 AP によって Step が 1 つずつ上がります。たとえば 1年後は G6-S2、2年後は G6-S3 です。その後、仕事の経験や役割が増えて昇格する場合は、PP を使って次の Grade を決めます。たとえば G6-S4 の時点で昇格する場合、G5B の中で条件を満たす最初の Step に移動します。",
+        "case_mid_title": "例2：スーパーバイザーレベルの中途社員を採用した場合",
+        "case_mid_text": "たとえばスーパーバイザーレベルの中途社員は G4-S3 から始まるとします。この場合も、毎年 AP によって同じ Grade の中で Step が上がります。たとえば 1年後は G4-S4、2年後は G4-S5 です。その後、さらに大きな役割を持つ場合は、昇格時に PP を加えて G3 の中で条件を満たす最初の Step に移動します。",
+        "case_note": "実際のスタート位置は、経験・スキル・採用条件に応じて決まります。ここでは制度の考え方をイメージしやすくするための例を示しています。",
         "wage_heading": "賃金テーブル",
         "wage_caption": "値は直接編集できます。説明会で見せる用にも、そのまま管理用にも使えます。",
         "download_csv": "CSVをダウンロード",
@@ -254,6 +260,12 @@ LANGUAGE_PACK = {
         "diagram_help2": "AP means annual raise within the same grade. PP means the additional raise given at promotion to the next grade.",
         "diagram_help3": "At promotion, the employee moves to the closest step in the next grade that meets the minimum required amount.",
         "simple_example_text": "Example: when an employee at G5A-S4 is promoted, first calculate Current Salary + AP + PP, then find the first Step in G4 that is equal to or higher than that threshold.",
+        "case_study_heading": "Easy-to-Understand Examples",
+        "case_new_grad_title": "Case 1: When a new graduate is hired",
+        "case_new_grad_text": "For example, a new graduate may start at G6-S1. After that, the Step increases by AP every year. For example, after one year the employee may move to G6-S2, and after two years to G6-S3. Later, when the employee is promoted, PP is used to determine the move to the next Grade. For example, if promotion happens at G6-S4, the employee moves to the first Step in G5B that meets the required amount.",
+        "case_mid_title": "Case 2: When a mid-career supervisor-level employee is hired",
+        "case_mid_text": "For example, a supervisor-level mid-career hire may start at G4-S3. In the same way, the Step increases within the same Grade by AP each year. For example, after one year the employee may move to G4-S4, and after two years to G4-S5. Later, if the employee takes on a bigger role, PP is added and the employee moves to the first Step in G3 that meets the required amount.",
+        "case_note": "The actual starting position depends on experience, skills, and hiring conditions. These are only sample cases to help explain the system.",
         "wage_heading": "Wage Table",
         "wage_caption": "You can edit the values directly. It can be used both for presentation and management.",
         "download_csv": "Download CSV",
@@ -900,6 +912,15 @@ with tab1:
     })
     st.subheader(t("grade_table"))
     st.dataframe(ref_df, use_container_width=True, hide_index=True)
+
+    st.subheader(t("case_study_heading"))
+    with st.container(border=True):
+        st.markdown(f"**{t('case_new_grad_title')}**")
+        st.write(t("case_new_grad_text"))
+    with st.container(border=True):
+        st.markdown(f"**{t('case_mid_title')}**")
+        st.write(t("case_mid_text"))
+    st.caption(t("case_note"))
 
 with tab2:
     st.subheader(t("diagram_heading1"))
