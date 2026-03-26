@@ -56,6 +56,8 @@ LANGUAGE_PACK = {
         "tab_diagram": "図で理解",
         "tab_table": "賃金テーブル",
         "tab_sim": "昇格シミュレーション",
+        "tab_next_year": "来年昇格シミュレーション",
+        "tab_allowance_export": "手当込みエクスポート",
         "tab_admin": "管理設定",
         "sidebar_lang": "表示言語",
         "sidebar_currency": "通貨記号",
@@ -108,6 +110,24 @@ LANGUAGE_PACK = {
         "no_next_grade": "これ以上の次グレードはありません。",
         "gs_before": "昇格前GS",
         "gs_after": "昇格後GS",
+        "next_year_heading": "来年昇格シミュレーション",
+        "apply_next_step": "昇格前に来年のStepアップを反映する",
+        "next_year_current_step": "来年時点の現在ステップ",
+        "next_year_current_salary": "来年時点の現在給与",
+        "next_year_result": "来年昇格後のGS",
+        "allowance_export_heading": "手当込み賃金テーブル",
+        "allowance_export_text": "固定額の手当を加えた賃金テーブルを表示・エクスポートできます。",
+        "adjustment_allowance_export": "調整手当（固定額）",
+        "university_allowance_export": "大卒手当（固定額）",
+        "other_allowance_export": "その他手当（固定額）",
+        "include_university_allowance": "大卒手当を含める",
+        "include_adjustment_allowance": "調整手当を含める",
+        "include_other_allowance": "その他手当を含める",
+        "base_table": "基本給テーブル",
+        "allowance_total": "手当合計",
+        "total_pay": "合計支給額",
+        "export_with_allowances_csv": "手当込みCSVをダウンロード",
+        "export_with_allowances_excel": "手当込みExcelをダウンロード",
         "admin_heading": "管理設定",
         "admin_text": "ここで初期テーブルの自動生成ルールを変更できます。実際の賃金額が決まっている場合は、下のテーブルを直接編集してください。",
         "base_salary": "Step1基準額",
@@ -144,26 +164,6 @@ LANGUAGE_PACK = {
         "admin_locked": "管理設定の変更にはパスワードが必要です。",
         "admin_unlocked": "管理ロックを解除しました。",
         "admin_password_error": "パスワードが違います。",
-        "tab_next_year": "来年昇格シミュレーション",
-        "next_year_heading": "来年昇格シミュレーション",
-        "apply_next_step": "昇格前に来年のStepアップを反映する",
-        "next_year_current_step": "来年時点の現在ステップ",
-        "next_year_current_salary": "来年時点の現在給与",
-        "next_year_result": "来年昇格後のGS",
-        "tab_allowance_export": "手当込みエクスポート",
-        "allowance_export_heading": "手当込み賃金テーブル",
-        "allowance_export_text": "固定額の手当を加えた賃金テーブルを表示・エクスポートできます。",
-        "adjustment_allowance_export": "調整手当（固定額）",
-        "university_allowance_export": "大卒手当（固定額）",
-        "other_allowance_export": "その他手当（固定額）",
-        "include_university_allowance": "大卒手当を含める",
-        "include_adjustment_allowance": "調整手当を含める",
-        "include_other_allowance": "その他手当を含める",
-        "base_table": "基本給テーブル",
-        "allowance_total": "手当合計",
-        "total_pay": "合計支給額",
-        "export_with_allowances_csv": "手当込みCSVをダウンロード",
-        "export_with_allowances_excel": "手当込みExcelをダウンロード",
     },
     "English": {
         "title": "Wage Table Management & Explanation Page",
@@ -172,6 +172,8 @@ LANGUAGE_PACK = {
         "tab_diagram": "Visual Guide",
         "tab_table": "Wage Table",
         "tab_sim": "Promotion Simulation",
+        "tab_next_year": "Next-Year Promotion",
+        "tab_allowance_export": "Allowance Export",
         "tab_admin": "Admin Settings",
         "sidebar_lang": "Language",
         "sidebar_currency": "Currency symbol",
@@ -224,6 +226,24 @@ LANGUAGE_PACK = {
         "no_next_grade": "No higher grade is available.",
         "gs_before": "Current GS",
         "gs_after": "New GS",
+        "next_year_heading": "Next-Year Promotion Simulation",
+        "apply_next_step": "Apply next year's step-up before promotion",
+        "next_year_current_step": "Next-year current step",
+        "next_year_current_salary": "Next-year current salary",
+        "next_year_result": "Next-year promoted GS",
+        "allowance_export_heading": "Allowance-Included Wage Table",
+        "allowance_export_text": "You can view and export a wage table with fixed allowances added.",
+        "adjustment_allowance_export": "Adjustment allowance (fixed)",
+        "university_allowance_export": "University allowance (fixed)",
+        "other_allowance_export": "Other allowance (fixed)",
+        "include_university_allowance": "Include university allowance",
+        "include_adjustment_allowance": "Include adjustment allowance",
+        "include_other_allowance": "Include other allowance",
+        "base_table": "Base pay table",
+        "allowance_total": "Allowance total",
+        "total_pay": "Total pay",
+        "export_with_allowances_csv": "Download allowance CSV",
+        "export_with_allowances_excel": "Download allowance Excel",
         "admin_heading": "Admin Settings",
         "admin_text": "Here you can change the auto-generation rule for the initial table. If actual salary values are fixed, you can edit the wage table directly below.",
         "base_salary": "Base Salary at Step 1",
@@ -260,26 +280,6 @@ LANGUAGE_PACK = {
         "admin_locked": "A password is required to change admin settings.",
         "admin_unlocked": "Admin is unlocked.",
         "admin_password_error": "Incorrect password.",
-        "tab_next_year": "Next-Year Promotion",
-        "next_year_heading": "Next-Year Promotion Simulation",
-        "apply_next_step": "Apply next year's step-up before promotion",
-        "next_year_current_step": "Next-year current step",
-        "next_year_current_salary": "Next-year current salary",
-        "next_year_result": "Next-year promoted GS",
-        "tab_allowance_export": "Allowance Export",
-        "allowance_export_heading": "Allowance-Included Wage Table",
-        "allowance_export_text": "You can view and export a wage table with fixed allowances added.",
-        "adjustment_allowance_export": "Adjustment allowance (fixed)",
-        "university_allowance_export": "University allowance (fixed)",
-        "other_allowance_export": "Other allowance (fixed)",
-        "include_university_allowance": "Include university allowance",
-        "include_adjustment_allowance": "Include adjustment allowance",
-        "include_other_allowance": "Include other allowance",
-        "base_table": "Base pay table",
-        "allowance_total": "Allowance total",
-        "total_pay": "Total pay",
-        "export_with_allowances_csv": "Download allowance CSV",
-        "export_with_allowances_excel": "Download allowance Excel",
     },
 }
 
@@ -356,8 +356,8 @@ def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, floa
             base = float(row["Base"])
             ap = float(row["AP"])
             pp = float(row["PP"])
-        except Exception:
-            raise ValueError(f"Row {i + 1}: Base/AP/PP must be numeric")
+        except Exception as exc:
+            raise ValueError(f"Row {i + 1}: Base/AP/PP must be numeric") from exc
         new_params[grade] = {"base": base, "ap": ap, "pp": pp}
     return new_params
 
@@ -598,7 +598,7 @@ def display_table_with_gs(df: pd.DataFrame) -> pd.DataFrame:
 def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
     lines = []
     lines.append("digraph G {")
-    lines.append('rankdir=LR;')
+    lines.append("rankdir=LR;")
     lines.append('node [shape="box", style="rounded,filled", fillcolor="white"];')
     for g in GRADES:
         lines.append(f'subgraph cluster_{g} {{ label="{g}"; style="rounded";')
@@ -851,7 +851,7 @@ with tab4:
     with a3:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
 
-    if st.button(t("simulate"), use_container_width=True):
+    if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
         result = find_promotion_result(st.session_state.wage_df, st.session_state.params, current_grade, int(current_step))
 
         if result is None:
@@ -905,13 +905,13 @@ with tab5:
 
     ny1, ny2, ny3 = st.columns(3)
     with ny1:
-        next_year_grade = st.selectbox(f"{t('current_grade')} ", GRADES[:-1], index=0, key="next_year_grade")
+        next_year_grade = st.selectbox(t("current_grade"), GRADES[:-1], index=0, key="next_year_grade")
     with ny2:
-        next_year_step = st.selectbox(f"{t('current_step')} ", STEPS, index=0, key="next_year_step")
+        next_year_step = st.selectbox(t("current_step"), STEPS, index=0, key="next_year_step")
     with ny3:
         apply_next_step_flag = st.checkbox(t("apply_next_step"), value=True)
 
-    if st.button(t("simulate") + " / Next Year", use_container_width=True):
+    if st.button(t("simulate"), use_container_width=True, key="simulate_next_year"):
         next_year_result = find_next_year_promotion_result(
             st.session_state.wage_df,
             st.session_state.params,
