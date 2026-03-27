@@ -1246,16 +1246,53 @@ with tab8:
             else:
                 st.error(t("admin_password_error"))
     else:
-        input_cols = st.columns(len(GRADES))
+        if st.session_state.lang == "Japanese":
+            st.info("表形式で Base / AP / PP をまとめて編集できます。EnterキーやTabキーで次のセルへ移動しやすくしてあります。")
+            st.caption("AP・PP もこの表で直接変更できます。変更後に『再生成』を押すと賃金テーブルへ反映されます。")
+            grade_col_label = "グレード"
+            position_col_label = "役職"
+        else:
+            st.info("You can edit Base / AP / PP in a spreadsheet-style grid. Use Enter or Tab to move to the next cell more easily.")
+            st.caption("AP and PP can also be updated directly in this grid. Click Rebuild after editing to apply the changes to the wage table.")
+            grade_col_label = "Grade"
+            position_col_label = "Position"
+
+        settings_editor_df = pd.DataFrame([
+            {
+                grade_col_label: g,
+                position_col_label: grade_label(g),
+                t("base_salary"): float(st.session_state.params[g]["base"]),
+                t("ap"): float(st.session_state.params[g]["ap"]),
+                t("pp"): float(st.session_state.params[g]["pp"]),
+            }
+            for g in GRADES
+        ])
+
+        edited_settings_df = st.data_editor(
+            settings_editor_df,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="fixed",
+            disabled=[grade_col_label, position_col_label],
+            column_config={
+                grade_col_label: st.column_config.TextColumn(width="small"),
+                position_col_label: st.column_config.TextColumn(width="medium"),
+                t("base_salary"): st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
+                t("ap"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
+                t("pp"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
+            },
+            key="admin_settings_grid",
+        )
+
         tmp_params = {}
-        for idx, g in enumerate(GRADES):
-            with input_cols[idx]:
-                st.markdown(f"**{g}**")
-                st.caption(grade_label(g))
-                base = st.number_input(f"{g} - {t('base_salary')}", min_value=0.0, value=float(st.session_state.params[g]["base"]), step=100.0, key=f"base_{g}")
-                ap = st.number_input(f"{g} - {t('ap')}", min_value=0.0, value=float(st.session_state.params[g]["ap"]), step=50.0, key=f"ap_{g}")
-                pp = st.number_input(f"{g} - {t('pp')}", min_value=0.0, value=float(st.session_state.params[g]["pp"]), step=50.0, key=f"pp_{g}")
-                tmp_params[g] = {"base": base, "ap": ap, "pp": pp}
+        for _, row in edited_settings_df.iterrows():
+            g = str(row[grade_col_label]).strip()
+            tmp_params[g] = {
+                "base": float(row[t("base_salary")]),
+                "ap": float(row[t("ap")]),
+                "pp": float(row[t("pp")]),
+            }
+
         b1, b2 = st.columns(2)
         with b1:
             if st.button(t("rebuild"), use_container_width=True):
@@ -1274,6 +1311,7 @@ with tab8:
                     st.rerun()
                 except Exception as e:
                     st.error(f"{t('supabase_save_error')}\n\nDetail: {str(e)}")
+
 
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
