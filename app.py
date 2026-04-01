@@ -525,14 +525,20 @@ def rows_to_params(rows: List[Dict[str, float]]) -> Dict[str, Dict[str, float]]:
 def get_supabase_config() -> Optional[Dict[str, str]]:
     try:
         url = st.secrets["SUPABASE_URL"]
-        service_role_key = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
+        service_role_key = (
+            st.secrets.get("SUPABASE_SERVICE_ROLE_KEY")
+            or st.secrets.get("SUPABASE_KEY")
+            or st.secrets.get("SUPABASE_ANON_KEY")
+        )
+        if not service_role_key:
+            return None
         table = st.secrets.get("SUPABASE_TABLE", "wage_settings")
         users_table = st.secrets.get("SUPABASE_USERS_TABLE", "app_users")
         return {
-            "url": url.rstrip("/"),
-            "key": service_role_key,
-            "table": table,
-            "users_table": users_table,
+            "url": str(url).rstrip("/"),
+            "key": str(service_role_key),
+            "table": str(table),
+            "users_table": str(users_table),
         }
     except Exception:
         return None
@@ -604,12 +610,15 @@ def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
     config = get_supabase_config()
     if config is None:
         return None
+    login_id = str(login_id).strip()
+    if not login_id:
+        return None
     try:
         result = supabase_request(
             method="GET",
             path=config["users_table"],
             query={
-                "select": "id,username,display_name,role,password_hash,is_active",
+                "select": "*",
                 "username": f"eq.{login_id}",
                 "limit": "1",
             },
@@ -621,20 +630,39 @@ def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
     return None
 
 
-def verify_password(password: str, password_hash_value: str) -> bool:
-    if not password_hash_value:
-        return False
-    return hash_password(password) == str(password_hash_value)
+def verify_password(password: str, user: Dict[str, object]) -> bool:
+    raw_password = str(password or "")
+    stored_hash = str(user.get("password_hash") or "").strip()
+    stored_plain = str(user.get("password") or "").strip()
+
+    if stored_hash:
+        return hash_password(raw_password) == stored_hash
+    if stored_plain:
+        return raw_password == stored_plain
+    return False
+
+
+def normalize_role(role_value: object) -> str:
+    role = str(role_value or "viewer").strip().lower()
+    return role if role in ("admin", "viewer") else "viewer"
+
+
+def is_user_active(user: Dict[str, object]) -> bool:
+    value = user.get("is_active", True)
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("true", "1", "yes", "y")
 
 
 def authenticate_user(login_id: str, password: str) -> Optional[Dict[str, object]]:
     user = get_user_by_login_id(login_id)
     if not user:
         return None
-    if not bool(user.get("is_active", True)):
+    if not is_user_active(user):
         return None
-    if not verify_password(password, str(user.get("password_hash", ""))):
+    if not verify_password(password, user):
         return None
+    user["role"] = normalize_role(user.get("role"))
     return user
 
 
@@ -896,13 +924,16 @@ if login_enabled() and not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.session_state.login_user = str(user.get("username", login_id)).strip()
             st.session_state.display_name = str(user.get("display_name") or st.session_state.login_user).strip()
-            st.session_state.user_role = str(user.get("role") or "viewer").strip().lower()
+            st.session_state.user_role = normalize_role(user.get("role"))
             st.rerun()
         else:
             st.error(t("login_error"))
     st.stop()
 elif not login_enabled():
     st.warning("Supabase login is not configured. The app is running in local viewer mode.")
+
+if not is_admin():
+    st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
 
 # =========================================================
 # Sidebar
