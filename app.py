@@ -606,39 +606,84 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
         raise RuntimeError(str(exc)) from exc
 
 
-def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
+def get_login_users_from_supabase() -> List[Dict[str, object]]:
     config = get_supabase_config()
     if config is None:
-        return None
-    login_id = str(login_id).strip()
-    if not login_id:
-        return None
+        return []
     try:
         result = supabase_request(
             method="GET",
             path=config["users_table"],
-            query={
-                "select": "*",
-                "username": f"eq.{login_id}",
-                "limit": "1",
-            },
+            query={"select": "*", "limit": "500"},
         )
-        if result:
-            return result[0]
+        return result if isinstance(result, list) else []
     except Exception:
+        return []
+
+
+def _candidate_login_values(user: Dict[str, object]) -> List[str]:
+    keys = ["username", "login_id", "user_id", "email", "id"]
+    values: List[str] = []
+    for key in keys:
+        value = user.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            values.append(text)
+    return values
+
+
+def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
+    login_id = str(login_id).strip()
+    if not login_id:
         return None
+
+    users = get_login_users_from_supabase()
+    if not users:
+        return None
+
+    # まず完全一致、次に小文字一致で探す
+    for user in users:
+        if login_id in _candidate_login_values(user):
+            return user
+
+    login_id_lower = login_id.lower()
+    for user in users:
+        lowered = [v.lower() for v in _candidate_login_values(user)]
+        if login_id_lower in lowered:
+            return user
+
     return None
 
 
 def verify_password(password: str, user: Dict[str, object]) -> bool:
     raw_password = str(password or "")
-    stored_hash = str(user.get("password_hash") or "").strip()
-    stored_plain = str(user.get("password") or "").strip()
+    possible_hashes = [
+        str(user.get("password_hash") or "").strip(),
+        str(user.get("password_sha256") or "").strip(),
+        str(user.get("sha256_password") or "").strip(),
+    ]
+    possible_plain = [
+        str(user.get("password") or "").strip(),
+        str(user.get("plain_password") or "").strip(),
+    ]
 
-    if stored_hash:
-        return hash_password(raw_password) == stored_hash
-    if stored_plain:
-        return raw_password == stored_plain
+    raw_hash = hash_password(raw_password).lower()
+    for stored_hash in possible_hashes:
+        normalized = stored_hash.lower().strip()
+        if not normalized:
+            continue
+        if normalized == raw_hash:
+            return True
+        # 万一ハッシュ列に平文が入っていた場合も救済
+        if stored_hash == raw_password:
+            return True
+
+    for stored_plain in possible_plain:
+        if stored_plain and stored_plain == raw_password:
+            return True
+
     return False
 
 
@@ -921,13 +966,27 @@ if login_enabled() and not st.session_state.logged_in:
     if st.button(t("login_button"), use_container_width=True):
         user = authenticate_user(login_id.strip(), login_password)
         if user is not None:
+            resolved_login = ""
+            for k in ("username", "login_id", "user_id", "email", "id"):
+                v = str(user.get(k) or "").strip()
+                if v:
+                    resolved_login = v
+                    break
             st.session_state.logged_in = True
-            st.session_state.login_user = str(user.get("username", login_id)).strip()
+            st.session_state.login_user = resolved_login or login_id.strip()
             st.session_state.display_name = str(user.get("display_name") or st.session_state.login_user).strip()
             st.session_state.user_role = normalize_role(user.get("role"))
             st.rerun()
         else:
             st.error(t("login_error"))
+            with st.expander("Login debug"):
+                cfg = get_supabase_config()
+                st.write({
+                    "supabase_configured": cfg is not None,
+                    "users_table": cfg.get("users_table") if cfg else None,
+                    "user_count_preview": len(get_login_users_from_supabase()) if cfg else 0,
+                    "login_id_entered": login_id.strip(),
+                })
     st.stop()
 elif not login_enabled():
     st.warning("Supabase login is not configured. The app is running in local viewer mode.")
