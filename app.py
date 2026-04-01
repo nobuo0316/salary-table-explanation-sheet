@@ -625,7 +625,7 @@ def get_login_users_from_supabase() -> List[Dict[str, object]]:
             path=config["users_table"],
             query={"select": "*", "limit": "500"},
         )
-                if isinstance(result, list):
+        if isinstance(result, list):
             return result + [fallback_admin]
         return [fallback_admin]
         
