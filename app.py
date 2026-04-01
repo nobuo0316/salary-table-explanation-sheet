@@ -1,3 +1,4 @@
+import hashlib
 import json
 from io import BytesIO
 from typing import Dict, List, Optional
@@ -402,20 +403,12 @@ def format_money(value: float) -> str:
         return "-"
 
 
-def get_login_users() -> Dict[str, str]:
-    try:
-        raw = st.secrets.get("LOGIN_USERS_JSON", "")
-        if raw:
-            parsed = json.loads(raw)
-            if isinstance(parsed, dict):
-                return {str(k): str(v) for k, v in parsed.items()}
-    except Exception:
-        pass
-    return {}
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def login_enabled() -> bool:
-    return len(get_login_users()) > 0
+    return get_supabase_config() is not None
 
 
 def build_wage_table(params: Dict[str, Dict[str, float]]) -> pd.DataFrame:
@@ -534,7 +527,13 @@ def get_supabase_config() -> Optional[Dict[str, str]]:
         url = st.secrets["SUPABASE_URL"]
         service_role_key = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
         table = st.secrets.get("SUPABASE_TABLE", "wage_settings")
-        return {"url": url.rstrip("/"), "key": service_role_key, "table": table}
+        users_table = st.secrets.get("SUPABASE_USERS_TABLE", "app_users")
+        return {
+            "url": url.rstrip("/"),
+            "key": service_role_key,
+            "table": table,
+            "users_table": users_table,
+        }
     except Exception:
         return None
 
@@ -601,18 +600,50 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
         raise RuntimeError(str(exc)) from exc
 
 
-def admin_auth_enabled() -> bool:
-    return "ADMIN_PASSWORD" in st.secrets and bool(st.secrets["ADMIN_PASSWORD"])
+def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
+    config = get_supabase_config()
+    if config is None:
+        return None
+    try:
+        result = supabase_request(
+            method="GET",
+            path=config["users_table"],
+            query={
+                "select": "id,username,display_name,role,password_hash,is_active",
+                "username": f"eq.{login_id}",
+                "limit": "1",
+            },
+        )
+        if result:
+            return result[0]
+    except Exception:
+        return None
+    return None
 
 
-def is_admin_unlocked() -> bool:
-    if not admin_auth_enabled():
-        return True
-    return st.session_state.get("admin_unlocked", False)
+def verify_password(password: str, password_hash_value: str) -> bool:
+    if not password_hash_value:
+        return False
+    return hash_password(password) == str(password_hash_value)
+
+
+def authenticate_user(login_id: str, password: str) -> Optional[Dict[str, object]]:
+    user = get_user_by_login_id(login_id)
+    if not user:
+        return None
+    if not bool(user.get("is_active", True)):
+        return None
+    if not verify_password(password, str(user.get("password_hash", ""))):
+        return None
+    return user
 
 
 def is_admin() -> bool:
-    return is_admin_unlocked()
+    return st.session_state.get("user_role", "viewer") == "admin"
+
+
+def is_viewer() -> bool:
+    return st.session_state.get("user_role", "viewer") in ("viewer", "admin")
 
 
 def get_current_salary(df: pd.DataFrame, grade: str, step: int) -> float:
@@ -805,12 +836,14 @@ if "currency_symbol" not in st.session_state:
     st.session_state.currency_symbol = "₱"
 if "decimals" not in st.session_state:
     st.session_state.decimals = 0
-if "admin_unlocked" not in st.session_state:
-    st.session_state.admin_unlocked = False
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "login_user" not in st.session_state:
     st.session_state.login_user = ""
+if "display_name" not in st.session_state:
+    st.session_state.display_name = ""
+if "user_role" not in st.session_state:
+    st.session_state.user_role = "viewer"
 if "params" not in st.session_state:
     st.session_state.params = load_settings_from_supabase()
 if "wage_df" not in st.session_state:
@@ -858,14 +891,18 @@ if login_enabled() and not st.session_state.logged_in:
     login_id = st.text_input(t("login_id"))
     login_password = st.text_input(t("login_password"), type="password")
     if st.button(t("login_button"), use_container_width=True):
-        users = get_login_users()
-        if users.get(login_id) == login_password:
+        user = authenticate_user(login_id.strip(), login_password)
+        if user is not None:
             st.session_state.logged_in = True
-            st.session_state.login_user = login_id
+            st.session_state.login_user = str(user.get("username", login_id)).strip()
+            st.session_state.display_name = str(user.get("display_name") or st.session_state.login_user).strip()
+            st.session_state.user_role = str(user.get("role") or "viewer").strip().lower()
             st.rerun()
         else:
             st.error(t("login_error"))
     st.stop()
+elif not login_enabled():
+    st.warning("Supabase login is not configured. The app is running in local viewer mode.")
 
 # =========================================================
 # Sidebar
@@ -880,11 +917,15 @@ st.session_state.currency_symbol = st.sidebar.text_input(t("sidebar_currency"), 
 st.session_state.decimals = st.sidebar.selectbox(t("sidebar_decimals"), [0, 1, 2], index=[0, 1, 2].index(st.session_state.decimals))
 
 if login_enabled() and st.session_state.logged_in:
-    st.sidebar.caption(f"{t('logged_in_as')}: {st.session_state.login_user}")
+    role_label = st.session_state.user_role or "viewer"
+    display_user = st.session_state.display_name or st.session_state.login_user
+    st.sidebar.caption(f"{t('logged_in_as')}: {display_user} ({role_label})")
     if st.sidebar.button(t("logout_button"), use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.login_user = ""
-        st.session_state.admin_unlocked = False
+        st.session_state.display_name = ""
+        st.session_state.user_role = "viewer"
+        st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
         st.rerun()
 
 if get_supabase_config() is not None:
@@ -1186,7 +1227,7 @@ with tab7:
                 except Exception as e:
                     st.error(f"{t('employee_import_error')}\n\nDetail: {str(e)}")
 
-    if not st.session_state.employee_roster_df.empty:
+    if not st.session_state.employee_roster_df.empty and is_admin():
         active_only = st.checkbox(t("active_only"), value=True)
         roster_university_allowance = st.number_input(t("default_university_allowance"), min_value=0.0, value=0.0, step=100.0)
         roster_apply_next_step = st.checkbox(t("apply_next_step"), value=True, key="roster_apply_next_step")
@@ -1226,6 +1267,8 @@ with tab7:
                 st.download_button(t("employee_export_excel"), data=emp_excel, file_name="employee_payroll.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             else:
                 st.info(t("excel_unavailable"))
+    elif not is_admin():
+        st.info("Employee CSV data is hidden for viewers. Only admins can upload, view, and export employee-level data.")
 
 # =========================================================
 # Tab 8: Admin
@@ -1235,55 +1278,45 @@ with tab8:
     st.markdown(f"<div class='info-card'>{t('admin_text')}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='warn-card'>{t('warning_rebuild')}</div>", unsafe_allow_html=True)
 
-    if admin_auth_enabled() and not is_admin_unlocked():
-        st.info(t("admin_locked"))
-        admin_password_input = st.text_input(t("admin_password"), type="password")
-        if st.button(t("admin_unlock"), use_container_width=True):
-            if admin_password_input == st.secrets["ADMIN_PASSWORD"]:
-                st.session_state.admin_unlocked = True
-                st.success(t("admin_unlocked"))
-                st.rerun()
-            else:
-                st.error(t("admin_password_error"))
+    if st.session_state.lang == "日本語":
+        st.info("表形式で Base / AP / PP をまとめて確認できます。管理者は編集・再生成、Viewer は閲覧のみです。")
+        st.caption("AP・PP もこの表で直接変更できます。変更後に『再生成』を押すと賃金テーブルへ反映されます。")
+        grade_col_label = "グレード"
+        position_col_label = "役職"
     else:
-        if st.session_state.lang == "Japanese":
-            st.info("表形式で Base / AP / PP をまとめて編集できます。EnterキーやTabキーで次のセルへ移動しやすくしてあります。")
-            st.caption("AP・PP もこの表で直接変更できます。変更後に『再生成』を押すと賃金テーブルへ反映されます。")
-            grade_col_label = "グレード"
-            position_col_label = "役職"
-        else:
-            st.info("You can edit Base / AP / PP in a spreadsheet-style grid. Use Enter or Tab to move to the next cell more easily.")
-            st.caption("AP and PP can also be updated directly in this grid. Click Rebuild after editing to apply the changes to the wage table.")
-            grade_col_label = "Grade"
-            position_col_label = "Position"
+        st.info("You can review Base / AP / PP in a spreadsheet-style grid. Admins can edit and rebuild, while viewers can only view.")
+        st.caption("AP and PP can also be updated directly in this grid. Click Rebuild after editing to apply the changes to the wage table.")
+        grade_col_label = "Grade"
+        position_col_label = "Position"
 
-        settings_editor_df = pd.DataFrame([
-            {
-                grade_col_label: g,
-                position_col_label: grade_label(g),
-                t("base_salary"): float(st.session_state.params[g]["base"]),
-                t("ap"): float(st.session_state.params[g]["ap"]),
-                t("pp"): float(st.session_state.params[g]["pp"]),
-            }
-            for g in GRADES
-        ])
+    settings_editor_df = pd.DataFrame([
+        {
+            grade_col_label: g,
+            position_col_label: grade_label(g),
+            t("base_salary"): float(st.session_state.params[g]["base"]),
+            t("ap"): float(st.session_state.params[g]["ap"]),
+            t("pp"): float(st.session_state.params[g]["pp"]),
+        }
+        for g in GRADES
+    ])
 
-        edited_settings_df = st.data_editor(
-            settings_editor_df,
-            hide_index=True,
-            use_container_width=True,
-            num_rows="fixed",
-            disabled=[grade_col_label, position_col_label],
-            column_config={
-                grade_col_label: st.column_config.TextColumn(width="small"),
-                position_col_label: st.column_config.TextColumn(width="medium"),
-                t("base_salary"): st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
-                t("ap"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
-                t("pp"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
-            },
-            key="admin_settings_grid",
-        )
+    edited_settings_df = st.data_editor(
+        settings_editor_df,
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        disabled=[grade_col_label, position_col_label] if is_admin() else True,
+        column_config={
+            grade_col_label: st.column_config.TextColumn(width="small"),
+            position_col_label: st.column_config.TextColumn(width="medium"),
+            t("base_salary"): st.column_config.NumberColumn(min_value=0.0, step=100.0, format="%.2f"),
+            t("ap"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
+            t("pp"): st.column_config.NumberColumn(min_value=0.0, step=50.0, format="%.2f"),
+        },
+        key="admin_settings_grid",
+    )
 
+    if is_admin():
         tmp_params = {}
         for _, row in edited_settings_df.iterrows():
             g = str(row[grade_col_label]).strip()
@@ -1312,41 +1345,36 @@ with tab8:
                 except Exception as e:
                     st.error(f"{t('supabase_save_error')}\n\nDetail: {str(e)}")
 
-
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
         st.markdown(f"<div class='info-card'>{t('csv_import_text')}</div>", unsafe_allow_html=True)
         template_csv = build_settings_csv_template().to_csv(index=False).encode("utf-8-sig")
         st.download_button(t("csv_template_download"), data=template_csv, file_name="wage_table_settings_template.csv", mime="text/csv")
 
-        uploaded_csv = None
-        if not is_admin():
-            st.markdown(f"<div class='warn-card'>{t('admin_only_upload_notice')}</div>", unsafe_allow_html=True)
-            st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload_disabled", disabled=True)
-            st.button(t("csv_apply"), use_container_width=True, disabled=True, key="csv_apply_disabled")
-        else:
-            uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
-            if uploaded_csv is not None:
+        uploaded_csv = st.file_uploader(t("csv_upload"), type=["csv"], key="settings_csv_upload")
+        if uploaded_csv is not None:
+            try:
+                uploaded_csv.seek(0)
+                preview_df = pd.read_csv(uploaded_csv)
+                st.markdown(f"**{t('csv_preview_heading')}**")
+                st.dataframe(preview_df, use_container_width=True, hide_index=True)
+            except Exception:
+                st.error(t("csv_import_error"))
+        if st.button(t("csv_apply"), use_container_width=True):
+            if uploaded_csv is None:
+                st.warning(t("csv_import_empty"))
+            else:
                 try:
                     uploaded_csv.seek(0)
-                    preview_df = pd.read_csv(uploaded_csv)
-                    st.markdown(f"**{t('csv_preview_heading')}**")
-                    st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                except Exception:
-                    st.error(t("csv_import_error"))
-            if st.button(t("csv_apply"), use_container_width=True):
-                if uploaded_csv is None:
-                    st.warning(t("csv_import_empty"))
-                else:
-                    try:
-                        uploaded_csv.seek(0)
-                        imported_df = pd.read_csv(uploaded_csv)
-                        new_params = validate_imported_settings_csv(imported_df)
-                        save_and_rebuild(new_params)
-                        st.success(t("csv_import_success"))
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
+                    imported_df = pd.read_csv(uploaded_csv)
+                    new_params = validate_imported_settings_csv(imported_df)
+                    save_and_rebuild(new_params)
+                    st.success(t("csv_import_success"))
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
+    else:
+        st.info("Viewer mode: settings can be viewed here, but only admins can rebuild tables or import CSV files.")
 
 st.markdown("---")
 st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
