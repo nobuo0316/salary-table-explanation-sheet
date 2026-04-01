@@ -1,0 +1,57 @@
+diff --git a/app.py b/app.py
+index 6073cc581f2044913e09ed1d0b72f9891a045994..71ec72ad851459b54044fe835cbf190a4743d7e2 100644
+--- a/app.py
++++ b/app.py
+@@ -672,50 +672,52 @@ def verify_password(password: str, user: Dict[str, object]) -> bool:
+     raw_hash = hash_password(raw_password).lower()
+     for stored_hash in possible_hashes:
+         normalized = stored_hash.lower().strip()
+         if not normalized:
+             continue
+         if normalized == raw_hash:
+             return True
+         # 万一ハッシュ列に平文が入っていた場合も救済
+         if stored_hash == raw_password:
+             return True
+ 
+     for stored_plain in possible_plain:
+         if stored_plain and stored_plain == raw_password:
+             return True
+ 
+     return False
+ 
+ 
+ def normalize_role(role_value: object) -> str:
+     role = str(role_value or "viewer").strip().lower()
+     return role if role in ("admin", "viewer") else "viewer"
+ 
+ 
+ def is_user_active(user: Dict[str, object]) -> bool:
+     value = user.get("is_active", True)
++    if value is None:
++        return True
+     if isinstance(value, bool):
+         return value
+     return str(value).strip().lower() in ("true", "1", "yes", "y")
+ 
+ 
+ def authenticate_user(login_id: str, password: str) -> Optional[Dict[str, object]]:
+     user = get_user_by_login_id(login_id)
+     if not user:
+         return None
+     if not is_user_active(user):
+         return None
+     if not verify_password(password, user):
+         return None
+     user["role"] = normalize_role(user.get("role"))
+     return user
+ 
+ 
+ def is_admin() -> bool:
+     return st.session_state.get("user_role", "viewer") == "admin"
+ 
+ 
+ def is_viewer() -> bool:
+     return st.session_state.get("user_role", "viewer") in ("viewer", "admin")
+ 
+ 
