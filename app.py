@@ -607,14 +607,7 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
 
 
 def get_login_users_from_supabase() -> List[Dict[str, object]]:
-    fallback_admin = {
-        "login_id": "admin",
-        "username": "admin",
-        "display_name": "Admin",
-        "password": "admin123",
-        "role": "admin",
-        "is_active": True,
-    }
+
 
     config = get_supabase_config()
     if config is None:
@@ -626,7 +619,7 @@ def get_login_users_from_supabase() -> List[Dict[str, object]]:
             query={"select": "*", "limit": "500"},
         )
         if isinstance(result, list):
-            return result + [fallback_admin]
+            return result if isinstance(result, list) else []
         return [fallback_admin]
         
     except Exception:
@@ -647,56 +640,23 @@ def _candidate_login_values(user: Dict[str, object]) -> List[str]:
 
 
 def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
-    login_id = str(login_id).strip()
-    if not login_id:
-        return None
-
     users = get_login_users_from_supabase()
-    if not users:
-        return None
-
-    # まず完全一致、次に小文字一致で探す
     for user in users:
-        if login_id in _candidate_login_values(user):
+        if str(user.get("username")).strip() == login_id:
             return user
-
-    login_id_lower = login_id.lower()
-    for user in users:
-        lowered = [v.lower() for v in _candidate_login_values(user)]
-        if login_id_lower in lowered:
-            return user
-
     return None
 
 
 def verify_password(password: str, user: Dict[str, object]) -> bool:
-    raw_password = str(password or "")
-    possible_hashes = [
-        str(user.get("password_hash") or "").strip(),
-        str(user.get("password_sha256") or "").strip(),
-        str(user.get("sha256_password") or "").strip(),
-    ]
-    possible_plain = [
-        str(user.get("password") or "").strip(),
-        str(user.get("plain_password") or "").strip(),
-    ]
+    raw = str(password or "")
+    stored = str(user.get("password_hash") or "").strip()
 
-    raw_hash = hash_password(raw_password).lower()
-    for stored_hash in possible_hashes:
-        normalized = stored_hash.lower().strip()
-        if not normalized:
-            continue
-        if normalized == raw_hash:
-            return True
-        # 万一ハッシュ列に平文が入っていた場合も救済
-        if stored_hash == raw_password:
-            return True
+    if not stored:
+        return False
 
-    for stored_plain in possible_plain:
-        if stored_plain and stored_plain == raw_password:
-            return True
+    input_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-    return False
+    return stored.lower() == input_hash.lower()
 
 
 def normalize_role(role_value: object) -> str:
