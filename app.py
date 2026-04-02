@@ -47,7 +47,8 @@ DEFAULT_EMPLOYEE_COLUMNS = [
     "Step",
     "University Graduate",
     "Adjustment Allowance",
-    "Other Allowance",
+    "Taxable Allowance",
+    "Non-Taxable Allowance",
     "Active",
 ]
 DEFAULT_PARAMS = {
@@ -187,6 +188,8 @@ LANGUAGE_PACK = {
         "univ_allowance": "大卒手当",
         "is_univ": "大卒対象",
         "other_allowance": "その他手当",
+        "taxable_allowance": "課税手当",
+        "non_taxable_allowance": "非課税手当",
         "final_salary": "最終支給額",
         "simulate": "シミュレーション実行",
         "no_next_grade": "これ以上の次グレードはありません。",
@@ -223,9 +226,19 @@ LANGUAGE_PACK = {
         "employee_university_flag": "大卒対象",
         "employee_adjustment_allowance": "調整手当",
         "employee_other_allowance": "その他手当",
+        "employee_taxable_allowance": "課税手当",
+        "employee_non_taxable_allowance": "非課税手当",
         "employee_university_allowance": "大卒手当",
         "employee_total_allowance": "手当合計",
         "employee_total_pay": "合計支給額",
+        "employee_sss": "SSS（本人負担）",
+        "employee_philhealth": "PhilHealth（本人負担）",
+        "employee_pagibig": "HDMF / Pag-IBIG（本人負担）",
+        "employee_taxable_income": "課税対象月額",
+        "employee_withholding_tax": "源泉税",
+        "employee_total_deductions": "控除合計",
+        "employee_net_pay": "手取り額",
+        "employee_net_note": "手取り額は、SSS・PhilHealth・HDMF/Pag-IBIG・BIR源泉税を反映した概算です。ローン控除、欠勤・遅刻控除、残業、夜勤、休日手当、非課税手当、13th month、税年末調整などは別途考慮が必要です。",
         "active_only": "在籍者のみ表示",
         "default_university_allowance": "名簿計算用の大卒手当（固定額）",
         "admin_heading": "管理設定",
@@ -346,6 +359,8 @@ LANGUAGE_PACK = {
         "adjustment_calc_current_basic": "Current Base Pay",
         "adjustment_calc_current_total": "Current Total Pay",
         "adjustment_calc_other_allowance": "Other Allowance to Keep",
+        "adjustment_calc_taxable_allowance": "Taxable Allowance to Keep",
+        "adjustment_calc_non_taxable_allowance": "Non-Taxable Allowance to Keep",
         "adjustment_calc_active": "Output as active employee",
         "adjustment_calc_run": "Run Batch CSV Calculation",
         "adjustment_calc_result": "Calculation Result",
@@ -370,6 +385,8 @@ LANGUAGE_PACK = {
         "univ_allowance": "University Allowance",
         "is_univ": "University Graduate",
         "other_allowance": "Other Allowance",
+        "taxable_allowance": "Taxable Allowance",
+        "non_taxable_allowance": "Non-Taxable Allowance",
         "final_salary": "Final Pay",
         "simulate": "Run Simulation",
         "no_next_grade": "No higher grade is available.",
@@ -406,9 +423,19 @@ LANGUAGE_PACK = {
         "employee_university_flag": "University Graduate",
         "employee_adjustment_allowance": "Adjustment Allowance",
         "employee_other_allowance": "Other Allowance",
+        "employee_taxable_allowance": "Taxable Allowance",
+        "employee_non_taxable_allowance": "Non-Taxable Allowance",
         "employee_university_allowance": "University Allowance",
         "employee_total_allowance": "Allowance Total",
         "employee_total_pay": "Total Pay",
+        "employee_sss": "SSS (Employee Share)",
+        "employee_philhealth": "PhilHealth (Employee Share)",
+        "employee_pagibig": "HDMF / Pag-IBIG (Employee Share)",
+        "employee_taxable_income": "Taxable Monthly Pay",
+        "employee_withholding_tax": "Withholding Tax",
+        "employee_total_deductions": "Total Deductions",
+        "employee_net_pay": "Net Pay",
+        "employee_net_note": "Net pay here is an estimate that includes SSS, PhilHealth, HDMF/Pag-IBIG, and BIR withholding tax. It does not yet include loans, absences/tardiness, overtime, night differential, holiday pay, non-taxable benefits, 13th-month pay, or year-end tax adjustment.",
         "active_only": "Show active employees only",
         "default_university_allowance": "Fixed university allowance for roster calculation",
         "admin_heading": "Admin Settings",
@@ -541,7 +568,8 @@ def build_employee_csv_template() -> pd.DataFrame:
             "Step": 4,
             "University Graduate": 1,
             "Adjustment Allowance": 1000,
-            "Other Allowance": 500,
+            "Taxable Allowance": 500,
+            "Non-Taxable Allowance": 200,
             "Active": 1,
         }
     ])
@@ -557,7 +585,8 @@ def build_adjustment_batch_csv_template() -> pd.DataFrame:
             "Current Basic Pay": 20000,
             "Current Total Pay": 22000,
             "University Graduate": 1,
-            "Other Allowance": 0,
+            "Taxable Allowance": 0,
+            "Non-Taxable Allowance": 0,
             "Active": 1,
         }
     ])
@@ -572,7 +601,8 @@ def validate_adjustment_batch_csv(df: pd.DataFrame) -> pd.DataFrame:
         "Current Basic Pay",
         "Current Total Pay",
         "University Graduate",
-        "Other Allowance",
+        "Taxable Allowance",
+        "Non-Taxable Allowance",
         "Active",
     ]
     if list(df.columns) != required_cols:
@@ -587,7 +617,7 @@ def validate_adjustment_batch_csv(df: pd.DataFrame) -> pd.DataFrame:
     if not out["New Grade"].isin(GRADES).all():
         raise ValueError(f"New Grade column contains invalid grade. Allowed: {GRADES}")
 
-    for col in ["Current Basic Pay", "Current Total Pay", "University Graduate", "Other Allowance", "Active"]:
+    for col in ["Current Basic Pay", "Current Total Pay", "University Graduate", "Taxable Allowance", "Non-Taxable Allowance", "Active"]:
         out[col] = pd.to_numeric(out[col], errors="raise")
 
     out["University Graduate"] = out["University Graduate"].astype(int)
@@ -608,7 +638,8 @@ def build_adjustment_batch_upload_df(
             current_basic_pay=float(row["Current Basic Pay"]),
             current_total_pay=float(row["Current Total Pay"]),
             is_university_graduate=int(row["University Graduate"]) == 1,
-            other_allowance=float(row["Other Allowance"]),
+            taxable_allowance=float(row["Taxable Allowance"]),
+            non_taxable_allowance=float(row["Non-Taxable Allowance"]),
             area_wage_tables=area_wage_tables,
             university_allowance_amount=university_allowance_amount,
         )
@@ -620,7 +651,8 @@ def build_adjustment_batch_upload_df(
             "Step": int(result["target_step"]),
             "University Graduate": int(result["is_university_graduate"]),
             "Adjustment Allowance": float(result["adjustment_allowance"]),
-            "Other Allowance": float(result["other_allowance"]),
+            "Taxable Allowance": float(result["taxable_allowance"]),
+            "Non-Taxable Allowance": float(result["non_taxable_allowance"]),
             "Active": int(row["Active"]),
         })
     return pd.DataFrame(rows)
@@ -650,10 +682,26 @@ def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, floa
 
 def validate_employee_roster_csv(df: pd.DataFrame) -> pd.DataFrame:
     required_cols = DEFAULT_EMPLOYEE_COLUMNS
-    if list(df.columns) != required_cols:
+    legacy_cols = [
+        "Employee ID",
+        "Name",
+        "Area",
+        "Grade",
+        "Step",
+        "University Graduate",
+        "Adjustment Allowance",
+        "Other Allowance",
+        "Active",
+    ]
+    if list(df.columns) == legacy_cols:
+        out = df.copy().rename(columns={"Other Allowance": "Taxable Allowance"})
+        out["Non-Taxable Allowance"] = 0.0
+        out = out[required_cols]
+    elif list(df.columns) == required_cols:
+        out = df.copy()
+    else:
         raise ValueError(f"Columns must be exactly: {required_cols}")
 
-    out = df.copy()
     out["Area"] = out["Area"].astype(str).str.strip()
     if not out["Area"].isin(AREAS).all():
         raise ValueError(f"Area column contains invalid area. Allowed: {AREAS}")
@@ -666,7 +714,7 @@ def validate_employee_roster_csv(df: pd.DataFrame) -> pd.DataFrame:
     if not out["Step"].isin(STEPS).all():
         raise ValueError("Step column contains invalid step")
 
-    for col in ["University Graduate", "Adjustment Allowance", "Other Allowance", "Active"]:
+    for col in ["University Graduate", "Adjustment Allowance", "Taxable Allowance", "Non-Taxable Allowance", "Active"]:
         out[col] = pd.to_numeric(out[col], errors="raise")
 
     out["University Graduate"] = out["University Graduate"].astype(int)
@@ -949,7 +997,8 @@ def calculate_adjustment_allowance_result(
     current_basic_pay: float,
     current_total_pay: float,
     is_university_graduate: bool,
-    other_allowance: float,
+    taxable_allowance: float,
+    non_taxable_allowance: float,
     area_wage_tables: Dict[str, pd.DataFrame],
     university_allowance_amount: float,
 ) -> Dict[str, float]:
@@ -958,7 +1007,7 @@ def calculate_adjustment_allowance_result(
     target_step = int(step_result["target_step"])
     new_basic_pay = float(step_result["target_salary"])
     university_allowance = float(university_allowance_amount if is_university_graduate else 0.0)
-    subtotal_before_adjustment = new_basic_pay + float(other_allowance) + university_allowance
+    subtotal_before_adjustment = new_basic_pay + float(taxable_allowance) + float(non_taxable_allowance) + university_allowance
     adjustment_allowance = max(float(current_total_pay) - subtotal_before_adjustment, 0.0)
     new_total_pay = subtotal_before_adjustment + adjustment_allowance
     return {
@@ -968,7 +1017,8 @@ def calculate_adjustment_allowance_result(
         "current_basic_pay": float(current_basic_pay),
         "current_total_pay": float(current_total_pay),
         "new_basic_pay": new_basic_pay,
-        "other_allowance": float(other_allowance),
+        "taxable_allowance": float(taxable_allowance),
+        "non_taxable_allowance": float(non_taxable_allowance),
         "university_allowance": university_allowance,
         "adjustment_allowance": adjustment_allowance,
         "new_total_pay": new_total_pay,
@@ -990,7 +1040,8 @@ def build_adjustment_upload_row(
         "Step": int(result["target_step"]),
         "University Graduate": int(result["is_university_graduate"]),
         "Adjustment Allowance": float(result["adjustment_allowance"]),
-        "Other Allowance": float(result["other_allowance"]),
+        "Taxable Allowance": float(result["taxable_allowance"]),
+        "Non-Taxable Allowance": float(result["non_taxable_allowance"]),
         "Active": int(1 if active else 0),
     }])
 
@@ -1012,6 +1063,254 @@ def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adj
     return out
 
 
+def get_sss_monthly_salary_credit(monthly_compensation: float) -> float:
+    comp = max(float(monthly_compensation or 0.0), 0.0)
+    if comp < 5250:
+        return 5000.0
+    if comp >= 34750:
+        return 35000.0
+    steps = int((comp - 5250) // 500)
+    return 5500.0 + (steps * 500.0)
+
+
+def compute_sss_employee_share(monthly_compensation: float) -> float:
+    msc = get_sss_monthly_salary_credit(monthly_compensation)
+    regular_ss = msc * 0.05
+    mpf = max(msc - 20000.0, 0.0) * 0.025
+    return round(regular_ss + mpf, 2)
+
+
+def compute_philhealth_employee_share(monthly_basic_salary: float) -> float:
+    mbs = min(max(float(monthly_basic_salary or 0.0), 10000.0), 100000.0)
+    monthly_premium = round(mbs * 0.05, 2)
+    return round(monthly_premium / 2.0, 2)
+
+
+def compute_pagibig_employee_share(monthly_compensation: float) -> float:
+    comp = max(float(monthly_compensation or 0.0), 0.0)
+    fund_salary = min(comp, 10000.0)
+    rate = 0.01 if comp <= 1500.0 else 0.02
+    return round(fund_salary * rate, 2)
+
+
+def compute_monthly_withholding_tax(taxable_monthly_pay: float) -> float:
+    pay = max(float(taxable_monthly_pay or 0.0), 0.0)
+    if pay <= 20833:
+        tax = 0.0
+    elif pay <= 33332:
+        tax = (pay - 20833.0) * 0.15
+    elif pay <= 66666:
+        tax = 1875.0 + (pay - 33333.0) * 0.20
+    elif pay <= 166666:
+        tax = 8541.80 + (pay - 66667.0) * 0.25
+    elif pay <= 666666:
+        tax = 33541.80 + (pay - 166667.0) * 0.30
+    else:
+        tax = 183541.80 + (pay - 666667.0) * 0.35
+    return round(max(tax, 0.0), 2)
+
+
+def compute_employee_net_pay_components(
+    basic_pay: float,
+    taxable_pay: float,
+    gross_pay: float,
+) -> Dict[str, float]:
+    contributory_compensation = max(float(taxable_pay or 0.0), 0.0)
+    sss_employee = compute_sss_employee_share(contributory_compensation)
+    philhealth_employee = compute_philhealth_employee_share(basic_pay)
+    pagibig_employee = compute_pagibig_employee_share(contributory_compensation)
+    taxable_monthly_pay = max(contributory_compensation - sss_employee - philhealth_employee - pagibig_employee, 0.0)
+    withholding_tax = compute_monthly_withholding_tax(taxable_monthly_pay)
+    total_deductions = round(sss_employee + philhealth_employee + pagibig_employee + withholding_tax, 2)
+    net_pay = round(gross_pay - total_deductions, 2)
+    return {
+        "sss_employee": round(sss_employee, 2),
+        "philhealth_employee": round(philhealth_employee, 2),
+        "pagibig_employee": round(pagibig_employee, 2),
+        "taxable_monthly_pay": round(taxable_monthly_pay, 2),
+        "withholding_tax": round(withholding_tax, 2),
+        "total_deductions": round(total_deductions, 2),
+        "net_pay": round(net_pay, 2),
+    }
+
+
+def build_payroll_adjustments_template() -> pd.DataFrame:
+    return pd.DataFrame([
+        {
+            "Employee ID": "E001",
+            "Cash Advance": 0,
+            "SSS Loan": 0,
+            "PagIBIG Loan": 0,
+            "Company Loan": 0,
+            "Absence Deduction": 0,
+            "Late Deduction": 0,
+            "Other Deduction": 0,
+        }
+    ])
+
+
+def validate_payroll_adjustments_csv(df: pd.DataFrame) -> pd.DataFrame:
+    required_cols = [
+        "Employee ID",
+        "Cash Advance",
+        "SSS Loan",
+        "PagIBIG Loan",
+        "Company Loan",
+        "Absence Deduction",
+        "Late Deduction",
+        "Other Deduction",
+    ]
+    if list(df.columns) != required_cols:
+        raise ValueError(f"Columns must be exactly: {required_cols}")
+    out = df.copy()
+    out["Employee ID"] = out["Employee ID"].astype(str).str.strip()
+    for col in required_cols[1:]:
+        out[col] = pd.to_numeric(out[col], errors="raise").fillna(0.0)
+    return out
+
+
+def _split_period_amount(monthly_amount: float, timing: str, pay_run: str) -> float:
+    amount = float(monthly_amount or 0.0)
+    if timing == "split_evenly":
+        return round(amount / 2.0, 2)
+    if timing == "first_half_only":
+        return round(amount, 2) if pay_run == "first_half" else 0.0
+    if timing == "second_half_only":
+        return round(amount, 2) if pay_run == "second_half" else 0.0
+    return round(amount / 2.0, 2)
+
+
+def build_payroll_run_df(
+    roster_df: pd.DataFrame,
+    area_wage_tables: Dict[str, pd.DataFrame],
+    university_allowance_amount: float,
+    pay_run: str,
+    payment_date: str,
+    statutory_deduction_timing: str,
+    adjustment_allowance_timing: str,
+    taxable_allowance_timing: str,
+    non_taxable_allowance_timing: str,
+    uploaded_adjustments_df: Optional[pd.DataFrame] = None,
+    uploaded_deduction_timing: str = "second_half_only",
+) -> pd.DataFrame:
+    adjustment_lookup: Dict[str, float] = {}
+    if uploaded_adjustments_df is not None and not uploaded_adjustments_df.empty:
+        temp = uploaded_adjustments_df.copy()
+        temp["Employee ID"] = temp["Employee ID"].astype(str).str.strip()
+        temp["uploaded_total"] = (
+            temp[[
+                "Cash Advance",
+                "SSS Loan",
+                "PagIBIG Loan",
+                "Company Loan",
+                "Absence Deduction",
+                "Late Deduction",
+                "Other Deduction",
+            ]]
+            .sum(axis=1)
+            .astype(float)
+        )
+        adjustment_lookup = dict(zip(temp["Employee ID"], temp["uploaded_total"]))
+
+    rows = []
+    for _, row in roster_df.iterrows():
+        area = str(row["Area"]).strip()
+        wage_df = area_wage_tables[area]
+        grade = str(row["Grade"])
+        step = int(row["Step"])
+        employee_id = str(row["Employee ID"]).strip()
+        basic_pay = get_current_salary(wage_df, grade, step)
+        adjustment_allowance = float(row["Adjustment Allowance"])
+        taxable_allowance = float(row["Taxable Allowance"])
+        non_taxable_allowance = float(row["Non-Taxable Allowance"])
+        university_flag = int(row["University Graduate"])
+        university_allowance = float(university_allowance_amount if university_flag == 1 else 0.0)
+
+        monthly_taxable_pay = basic_pay + adjustment_allowance + taxable_allowance + university_allowance
+        monthly_gross_pay = monthly_taxable_pay + non_taxable_allowance
+        net_components = compute_employee_net_pay_components(
+            basic_pay=basic_pay,
+            taxable_pay=monthly_taxable_pay,
+            gross_pay=monthly_gross_pay,
+        )
+
+        basic_for_period = round(basic_pay / 2.0, 2)
+        adjustment_for_period = _split_period_amount(adjustment_allowance, adjustment_allowance_timing, pay_run)
+        taxable_for_period = _split_period_amount(taxable_allowance, taxable_allowance_timing, pay_run)
+        non_taxable_for_period = _split_period_amount(non_taxable_allowance, non_taxable_allowance_timing, pay_run)
+        university_for_period = round(university_allowance / 2.0, 2)
+        gross_for_period = round(
+            basic_for_period
+            + adjustment_for_period
+            + taxable_for_period
+            + non_taxable_for_period
+            + university_for_period,
+            2,
+        )
+
+        if statutory_deduction_timing == "split_evenly":
+            sss_for_period = round(net_components["sss_employee"] / 2.0, 2)
+            philhealth_for_period = round(net_components["philhealth_employee"] / 2.0, 2)
+            pagibig_for_period = round(net_components["pagibig_employee"] / 2.0, 2)
+            withholding_tax_for_period = round(net_components["withholding_tax"] / 2.0, 2)
+        else:
+            if pay_run == "second_half":
+                sss_for_period = round(net_components["sss_employee"], 2)
+                philhealth_for_period = round(net_components["philhealth_employee"], 2)
+                pagibig_for_period = round(net_components["pagibig_employee"], 2)
+                withholding_tax_for_period = round(net_components["withholding_tax"], 2)
+            else:
+                sss_for_period = 0.0
+                philhealth_for_period = 0.0
+                pagibig_for_period = 0.0
+                withholding_tax_for_period = 0.0
+
+        uploaded_other_deductions_monthly = float(adjustment_lookup.get(employee_id, 0.0))
+        uploaded_other_deductions_for_period = _split_period_amount(
+            uploaded_other_deductions_monthly,
+            uploaded_deduction_timing,
+            pay_run,
+        )
+
+        statutory_total_for_period = round(
+            sss_for_period + philhealth_for_period + pagibig_for_period + withholding_tax_for_period,
+            2,
+        )
+        total_deductions_for_period = round(statutory_total_for_period + uploaded_other_deductions_for_period, 2)
+        net_for_period = round(gross_for_period - total_deductions_for_period, 2)
+
+        rows.append({
+            "Employee ID": employee_id,
+            "Name": str(row["Name"]),
+            "Area": area,
+            "Grade": grade,
+            "Step": step,
+            "University Graduate": university_flag,
+            "Basic Pay (Monthly)": round(basic_pay, 2),
+            "Adjustment Allowance (Monthly)": round(adjustment_allowance, 2),
+            "Taxable Allowance (Monthly)": round(taxable_allowance, 2),
+            "Non-Taxable Allowance (Monthly)": round(non_taxable_allowance, 2),
+            "University Allowance (Monthly)": round(university_allowance, 2),
+            "Gross Pay (Monthly)": round(monthly_gross_pay, 2),
+            "Basic Pay (Period)": basic_for_period,
+            "Adjustment Allowance (Period)": adjustment_for_period,
+            "Taxable Allowance (Period)": taxable_for_period,
+            "Non-Taxable Allowance (Period)": non_taxable_for_period,
+            "University Allowance (Period)": university_for_period,
+            "Gross Pay (Period)": gross_for_period,
+            "SSS": sss_for_period,
+            "PhilHealth": philhealth_for_period,
+            "HDMF/Pag-IBIG": pagibig_for_period,
+            "Withholding Tax": withholding_tax_for_period,
+            "Uploaded Other Deductions": uploaded_other_deductions_for_period,
+            "Total Deductions": total_deductions_for_period,
+            "Net Pay": net_for_period,
+            "Payment Date": payment_date,
+            "Payroll Run": pay_run,
+        })
+    return pd.DataFrame(rows)
+
+
 def build_employee_payroll(
     roster_df: pd.DataFrame,
     area_wage_tables: Dict[str, pd.DataFrame],
@@ -1025,11 +1324,14 @@ def build_employee_payroll(
         step = int(row["Step"])
         basic_pay = get_current_salary(wage_df, grade, step)
         adjustment_allowance = float(row["Adjustment Allowance"])
-        other_allowance = float(row["Other Allowance"])
+        taxable_allowance = float(row["Taxable Allowance"])
+        non_taxable_allowance = float(row["Non-Taxable Allowance"])
         university_flag = int(row["University Graduate"])
         university_allowance = float(university_allowance_amount if university_flag == 1 else 0.0)
-        total_allowance = adjustment_allowance + other_allowance + university_allowance
+        total_allowance = adjustment_allowance + taxable_allowance + non_taxable_allowance + university_allowance
+        taxable_pay = basic_pay + adjustment_allowance + taxable_allowance + university_allowance
         total_pay = basic_pay + total_allowance
+        net_components = compute_employee_net_pay_components(basic_pay=basic_pay, taxable_pay=taxable_pay, gross_pay=total_pay)
         rows.append({
             t("employee_id"): str(row["Employee ID"]),
             t("employee_name"): str(row["Name"]),
@@ -1039,10 +1341,18 @@ def build_employee_payroll(
             t("employee_basic_pay"): basic_pay,
             t("employee_university_flag"): university_flag,
             t("employee_adjustment_allowance"): adjustment_allowance,
-            t("employee_other_allowance"): other_allowance,
+            t("employee_taxable_allowance"): taxable_allowance,
+            t("employee_non_taxable_allowance"): non_taxable_allowance,
             t("employee_university_allowance"): university_allowance,
             t("employee_total_allowance"): total_allowance,
             t("employee_total_pay"): total_pay,
+            t("employee_sss"): net_components["sss_employee"],
+            t("employee_philhealth"): net_components["philhealth_employee"],
+            t("employee_pagibig"): net_components["pagibig_employee"],
+            t("employee_taxable_income"): net_components["taxable_monthly_pay"],
+            t("employee_withholding_tax"): net_components["withholding_tax"],
+            t("employee_total_deductions"): net_components["total_deductions"],
+            t("employee_net_pay"): net_components["net_pay"],
             "_active": int(row["Active"]),
         })
     return pd.DataFrame(rows)
@@ -1320,12 +1630,13 @@ with m2:
 with m3:
     st.metric(lang_text("エリア数", "Areas"), len(AREAS))
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     t("tab_overview"),
     t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
     t("tab_adjustment_calc"),
+    lang_text("給与支給リスト", "Payroll Run"),
     t("tab_allowance_export"),
     t("tab_employee"),
     t("tab_admin"),
@@ -1517,6 +1828,7 @@ with tab5:
     st.subheader(t("adjustment_calc_heading"))
     st.markdown(f"<div class='info-card'>{t('adjustment_calc_text')}</div>", unsafe_allow_html=True)
     st.caption(t("adjustment_calc_result_text"))
+    st.caption(lang_text("CSVは Taxable Allowance / Non-Taxable Allowance を分けて入力します。", "In the CSV, enter Taxable Allowance and Non-Taxable Allowance separately."))
 
     batch_template_csv = build_adjustment_batch_csv_template().to_csv(index=False).encode("utf-8-sig")
     st.download_button(
@@ -1564,7 +1876,7 @@ with tab5:
                 st.session_state.adjustment_upload_df = upload_df.copy()
 
                 preview_df = upload_df.copy()
-                for col in ["Adjustment Allowance", "Other Allowance"]:
+                for col in ["Adjustment Allowance", "Taxable Allowance", "Non-Taxable Allowance"]:
                     if col in preview_df.columns:
                         preview_df[col] = preview_df[col].apply(format_money)
                 st.markdown(f"**{lang_text('出力プレビュー', 'Output Preview')}**")
@@ -1596,9 +1908,161 @@ with tab5:
                 st.error(f"{lang_text('一括計算CSVの形式が正しくありません。', 'The batch calculation CSV format is invalid.')}\n\nDetail: {str(e)}")
 
 # =========================================================
-# Tab 6: Allowance export
+# Tab 6: Payroll run
 # =========================================================
 with tab6:
+    st.subheader(lang_text("給与支給リスト", "Payroll Run"))
+    st.markdown(
+        f"<div class='info-card'>{lang_text('月2回給与向けに、その回に誰へいくら支払うかを一括計算してCSV / Excelで出力します。基本給は毎回半分、法定控除は月末まとめまたは2回均等に対応します。', 'Generate a per-run payroll payment list for semi-monthly payroll. Base pay is split in half each run, while statutory deductions can be applied in the second half only or split evenly across both runs.')}</div>",
+        unsafe_allow_html=True,
+    )
+    if not is_admin():
+        st.markdown(f"<div class='warn-card'>{t('admin_only_upload_notice')}</div>", unsafe_allow_html=True)
+        st.info(lang_text("給与支給リストは従業員データを使うため管理者のみ利用できます。", "Payroll Run uses employee-level data, so it is available to admins only."))
+    elif st.session_state.employee_roster_df.empty:
+        st.warning(lang_text("先に『従業員名簿』タブでCSVを取り込んでください。", "Please import a CSV in the Employee Roster tab first."))
+    else:
+        pr1, pr2, pr3 = st.columns(3)
+        with pr1:
+            payroll_year = st.number_input(lang_text("対象年", "Year"), min_value=2024, max_value=2100, value=2026, step=1)
+        with pr2:
+            payroll_month = st.selectbox(lang_text("対象月", "Month"), list(range(1, 13)), index=3)
+        with pr3:
+            pay_run = st.selectbox(
+                lang_text("支給回", "Payroll Run"),
+                ["first_half", "second_half"],
+                format_func=lambda x: lang_text("1回目支給", "1st Half") if x == "first_half" else lang_text("2回目支給", "2nd Half"),
+            )
+
+        default_day = 15 if pay_run == "first_half" else 30
+        payment_date = st.text_input(
+            lang_text("支給日", "Payment Date"),
+            value=f"{int(payroll_year):04d}-{int(payroll_month):02d}-{default_day:02d}",
+            help=lang_text("形式: YYYY-MM-DD", "Format: YYYY-MM-DD"),
+        )
+
+        pr4, pr5 = st.columns(2)
+        with pr4:
+            statutory_deduction_timing = st.selectbox(
+                lang_text("法定控除の引き方", "Statutory deduction timing"),
+                ["second_half_only", "split_evenly"],
+                format_func=lambda x: lang_text("2回目支給でまとめて控除", "Deduct in 2nd half only") if x == "second_half_only" else lang_text("2回に均等配分", "Split evenly across both runs"),
+            )
+        with pr5:
+            uploaded_deduction_timing = st.selectbox(
+                lang_text("追加控除の引き方", "Uploaded deduction timing"),
+                ["second_half_only", "split_evenly"],
+                format_func=lambda x: lang_text("2回目支給でまとめて控除", "Deduct in 2nd half only") if x == "second_half_only" else lang_text("2回に均等配分", "Split evenly across both runs"),
+            )
+
+        st.markdown(f"**{lang_text('固定手当の支給タイミング', 'Fixed allowance timing')}**")
+        pr6, pr7, pr8 = st.columns(3)
+        timing_options = ["split_evenly", "first_half_only", "second_half_only"]
+        timing_format = lambda x: {
+            "split_evenly": lang_text("毎回半分", "Half each run"),
+            "first_half_only": lang_text("1回目に全額", "Full amount in 1st half"),
+            "second_half_only": lang_text("2回目に全額", "Full amount in 2nd half"),
+        }[x]
+        with pr6:
+            adjustment_allowance_timing = st.selectbox(lang_text("調整手当", "Adjustment Allowance"), timing_options, format_func=timing_format)
+        with pr7:
+            taxable_allowance_timing = st.selectbox(lang_text("課税手当", "Taxable Allowance"), timing_options, format_func=timing_format)
+        with pr8:
+            non_taxable_allowance_timing = st.selectbox(lang_text("非課税手当", "Non-Taxable Allowance"), timing_options, format_func=timing_format)
+
+        payroll_university_allowance = st.number_input(
+            t("default_university_allowance"),
+            min_value=0.0,
+            value=0.0,
+            step=100.0,
+            key="payroll_university_allowance",
+        )
+
+        deduction_template_csv = build_payroll_adjustments_template().to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            lang_text("追加控除CSVテンプレートをダウンロード", "Download additional deductions CSV template"),
+            data=deduction_template_csv,
+            file_name="payroll_additional_deductions_template.csv",
+            mime="text/csv",
+        )
+        uploaded_payroll_adj = st.file_uploader(
+            lang_text("追加控除CSV（任意）", "Additional deductions CSV (optional)"),
+            type=["csv"],
+            key="payroll_adjustments_csv",
+        )
+
+        validated_payroll_adj = None
+        if uploaded_payroll_adj is not None:
+            try:
+                uploaded_payroll_adj.seek(0)
+                payroll_adj_preview = pd.read_csv(uploaded_payroll_adj)
+                st.markdown(f"**{lang_text('追加控除CSVプレビュー', 'Additional deductions CSV preview')}**")
+                st.dataframe(payroll_adj_preview, use_container_width=True, hide_index=True)
+                validated_payroll_adj = validate_payroll_adjustments_csv(payroll_adj_preview)
+            except Exception as e:
+                st.error(f"{lang_text('追加控除CSVの形式が正しくありません。', 'The additional deductions CSV format is invalid.')}\n\nDetail: {str(e)}")
+
+        if st.button(lang_text("給与支給リストを作成", "Generate Payroll Run"), use_container_width=True):
+            try:
+                payroll_df = build_payroll_run_df(
+                    st.session_state.employee_roster_df,
+                    area_wage_tables=all_area_wage_tables(),
+                    university_allowance_amount=payroll_university_allowance,
+                    pay_run=pay_run,
+                    payment_date=payment_date,
+                    statutory_deduction_timing=statutory_deduction_timing,
+                    adjustment_allowance_timing=adjustment_allowance_timing,
+                    taxable_allowance_timing=taxable_allowance_timing,
+                    non_taxable_allowance_timing=non_taxable_allowance_timing,
+                    uploaded_adjustments_df=validated_payroll_adj,
+                    uploaded_deduction_timing=uploaded_deduction_timing,
+                )
+                active_mask = st.session_state.employee_roster_df["Active"].astype(int).tolist()
+                payroll_df = payroll_df[[a == 1 for a in active_mask]].reset_index(drop=True)
+                preview_payroll_df = payroll_df.copy()
+                money_columns = [
+                    col for col in preview_payroll_df.columns
+                    if any(keyword in col for keyword in ["Pay", "Allowance", "SSS", "PhilHealth", "HDMF", "Tax", "Deductions", "Net"])
+                ]
+                for col in money_columns:
+                    preview_payroll_df[col] = preview_payroll_df[col].apply(format_money)
+                preview_payroll_df["Area"] = preview_payroll_df["Area"].apply(area_label)
+                preview_payroll_df["Payroll Run"] = preview_payroll_df["Payroll Run"].map({
+                    "first_half": lang_text("1回目支給", "1st Half"),
+                    "second_half": lang_text("2回目支給", "2nd Half"),
+                })
+                st.markdown(f"**{lang_text('給与支給リスト', 'Payroll Payment List')}**")
+                st.dataframe(preview_payroll_df, use_container_width=True, hide_index=True)
+
+                payroll_csv = payroll_df.to_csv(index=False).encode("utf-8-sig")
+                payroll_excel = make_excel_file(payroll_df)
+                p1, p2 = st.columns(2)
+                with p1:
+                    st.download_button(
+                        lang_text("給与支給リストCSVをダウンロード", "Download payroll run CSV"),
+                        data=payroll_csv,
+                        file_name=f"payroll_run_{pay_run}_{int(payroll_year):04d}_{int(payroll_month):02d}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
+                with p2:
+                    if payroll_excel is not None:
+                        st.download_button(
+                            lang_text("給与支給リストExcelをダウンロード", "Download payroll run Excel"),
+                            data=payroll_excel,
+                            file_name=f"payroll_run_{pay_run}_{int(payroll_year):04d}_{int(payroll_month):02d}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.info(t("excel_unavailable"))
+            except Exception as e:
+                st.error(f"{lang_text('給与支給リストの作成に失敗しました。', 'Failed to generate the payroll run.')}\n\nDetail: {str(e)}")
+
+# =========================================================
+# Tab 7: Allowance export
+# =========================================================
+with tab7:
     st.subheader(t("allowance_export_heading"))
     st.write(f"{t('allowance_export_text')} ({area_label(st.session_state.selected_area)})")
     current_df = current_area_wage_df()
@@ -1626,11 +2090,13 @@ with tab6:
             st.info(t("excel_unavailable"))
 
 # =========================================================
-# Tab 7: Employee roster
+# Tab 8: Employee roster
 # =========================================================
-with tab7:
+with tab8:
     st.subheader(t("employee_heading"))
     st.markdown(f"<div class='info-card'>{t('employee_text')} {lang_text('エリア列を含めると、そのエリアの賃金テーブルが自動適用されます。', 'If the roster includes an Area column, the matching area wage table is applied automatically.')}</div>", unsafe_allow_html=True)
+    st.caption(t("employee_net_note"))
+    st.caption(lang_text("課税手当・非課税手当を分けて入力できます。旧CSVの Other Allowance は課税手当として読み込みます。", "You can separate taxable and non-taxable allowances. In legacy CSV files, Other Allowance is treated as Taxable Allowance."))
     template_emp_csv = build_employee_csv_template().to_csv(index=False).encode("utf-8-sig")
     st.download_button(t("employee_template_download"), data=template_emp_csv, file_name="employee_roster_template.csv", mime="text/csv")
 
@@ -1676,10 +2142,18 @@ with tab7:
         money_cols = [
             t("employee_basic_pay"),
             t("employee_adjustment_allowance"),
-            t("employee_other_allowance"),
+            t("employee_taxable_allowance"),
+            t("employee_non_taxable_allowance"),
             t("employee_university_allowance"),
             t("employee_total_allowance"),
             t("employee_total_pay"),
+            t("employee_sss"),
+            t("employee_philhealth"),
+            t("employee_pagibig"),
+            t("employee_taxable_income"),
+            t("employee_withholding_tax"),
+            t("employee_total_deductions"),
+            t("employee_net_pay"),
         ]
         for col in money_cols:
             if col in display_payroll_df.columns:
