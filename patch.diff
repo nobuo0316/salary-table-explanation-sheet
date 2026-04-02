@@ -1,57 +1,88 @@
-diff --git a/app.py b/app.py
-index 6073cc581f2044913e09ed1d0b72f9891a045994..71ec72ad851459b54044fe835cbf190a4743d7e2 100644
 --- a/app.py
 +++ b/app.py
-@@ -672,50 +672,52 @@ def verify_password(password: str, user: Dict[str, object]) -> bool:
-     raw_hash = hash_password(raw_password).lower()
-     for stored_hash in possible_hashes:
-         normalized = stored_hash.lower().strip()
-         if not normalized:
-             continue
-         if normalized == raw_hash:
-             return True
-         # 万一ハッシュ列に平文が入っていた場合も救済
-         if stored_hash == raw_password:
-             return True
- 
-     for stored_plain in possible_plain:
-         if stored_plain and stored_plain == raw_password:
-             return True
- 
-     return False
- 
- 
- def normalize_role(role_value: object) -> str:
-     role = str(role_value or "viewer").strip().lower()
-     return role if role in ("admin", "viewer") else "viewer"
- 
- 
- def is_user_active(user: Dict[str, object]) -> bool:
-     value = user.get("is_active", True)
-+    if value is None:
-+        return True
-     if isinstance(value, bool):
-         return value
-     return str(value).strip().lower() in ("true", "1", "yes", "y")
- 
- 
- def authenticate_user(login_id: str, password: str) -> Optional[Dict[str, object]]:
-     user = get_user_by_login_id(login_id)
-     if not user:
+@@
+ def get_login_users_from_supabase() -> List[Dict[str, object]]:
+-    fallback_admin = {
+-        "login_id": "admin",
+-        "username": "admin",
+-        "display_name": "Admin",
+-        "password": "admin123",
+-        "role": "admin",
+-        "is_active": True,
+-    }
+-
+     config = get_supabase_config()
+     if config is None:
+-        return [fallback_admin]
++        return []
+     try:
+         result = supabase_request(
+             method="GET",
+             path=config["users_table"],
+             query={"select": "*", "limit": "500"},
+         )
+-        if isinstance(result, list):
+-            return result + [fallback_admin]
+-        return [fallback_admin]
+-        
++        return result if isinstance(result, list) else []
+     except Exception:
+-        return [fallback_admin]
++        return []
+@@
+ def get_user_by_login_id(login_id: str) -> Optional[Dict[str, object]]:
+     login_id = str(login_id).strip()
+     if not login_id:
          return None
-     if not is_user_active(user):
+ 
+     users = get_login_users_from_supabase()
+     if not users:
          return None
-     if not verify_password(password, user):
-         return None
-     user["role"] = normalize_role(user.get("role"))
-     return user
  
+-    # まず完全一致、次に小文字一致で探す
+     for user in users:
+-        if login_id in _candidate_login_values(user):
++        if str(user.get("username") or "").strip() == login_id:
+             return user
  
- def is_admin() -> bool:
-     return st.session_state.get("user_role", "viewer") == "admin"
- 
- 
- def is_viewer() -> bool:
-     return st.session_state.get("user_role", "viewer") in ("viewer", "admin")
- 
- 
+-    login_id_lower = login_id.lower()
+-    for user in users:
+-        lowered = [v.lower() for v in _candidate_login_values(user)]
+-        if login_id_lower in lowered:
+-            return user
+-
+     return None
+@@
+ def verify_password(password: str, user: Dict[str, object]) -> bool:
+-    raw_password = str(password or "")
+-    possible_hashes = [
+-        str(user.get("password_hash") or "").strip(),
+-        str(user.get("password_sha256") or "").strip(),
+-        str(user.get("sha256_password") or "").strip(),
+-    ]
+-    possible_plain = [
+-        str(user.get("password") or "").strip(),
+-        str(user.get("plain_password") or "").strip(),
+-    ]
+-
+-    raw_hash = hash_password(raw_password).lower()
+-    for stored_hash in possible_hashes:
+-        normalized = stored_hash.lower().strip()
+-        if not normalized:
+-            continue
+-        if normalized == raw_hash:
+-            return True
+-        # 万一ハッシュ列に平文が入っていた場合も救済
+-        if stored_hash == raw_password:
+-            return True
+-
+-    for stored_plain in possible_plain:
+-        if stored_plain and stored_plain == raw_password:
+-            return True
+-
+-    return False
++    raw_password = str(password or "")
++    stored_hash = str(user.get("password_hash") or "").strip()
++    if not stored_hash:
++        return False
++    return hash_password(raw_password).lower() == stored_hash.lower()
