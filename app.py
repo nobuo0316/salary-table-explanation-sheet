@@ -90,6 +90,7 @@ LANGUAGE_PACK = {
         "tab_diagram": "図で理解",
         "tab_table": "賃金テーブル",
         "tab_sim": "昇格シミュレーション",
+        "tab_adjustment_calc": "調整手当計算",
         "tab_allowance_export": "手当込みエクスポート",
         "tab_employee": "従業員名簿",
         "tab_admin": "管理設定",
@@ -147,6 +148,34 @@ LANGUAGE_PACK = {
         "download_excel": "Excelをダウンロード",
         "download_note": "必要に応じて、このまま CSV / Excel で配布できます。",
         "sim_heading": "昇格シミュレーション",
+        "sim_detail_heading": "計算の内訳",
+        "sim_explanation_heading": "計算結果の説明",
+        "sim_item": "項目",
+        "sim_amount": "金額",
+        "sim_current_salary": "現在給与",
+        "sim_target_salary": "昇格後基本給",
+        "adjustment_calc_heading": "調整手当計算",
+        "adjustment_calc_text": "今の基本給を下回らない新グレードの Step を探し、その後、総支給額が今より下がる場合に必要な調整手当を計算します。計算結果はそのまま従業員名簿アップロード用CSVとしてダウンロードできます。",
+        "adjustment_calc_employee_id": "社員ID",
+        "adjustment_calc_name": "氏名",
+        "adjustment_calc_area": "エリア",
+        "adjustment_calc_target_grade": "新グレード",
+        "adjustment_calc_current_basic": "現在の基本給",
+        "adjustment_calc_current_total": "現在の総支給額",
+        "adjustment_calc_other_allowance": "その他手当（維持する額）",
+        "adjustment_calc_active": "在籍者として出力",
+        "adjustment_calc_run": "調整手当を計算",
+        "adjustment_calc_result": "計算結果",
+        "adjustment_calc_target_step": "適用Step",
+        "adjustment_calc_new_basic": "新基本給",
+        "adjustment_calc_university_allowance": "大卒手当",
+        "adjustment_calc_required_adjustment": "必要な調整手当",
+        "adjustment_calc_new_total": "新総支給額",
+        "adjustment_calc_download": "従業員名簿アップロード用CSVをダウンロード",
+        "adjustment_calc_download_excel": "計算結果Excelをダウンロード",
+        "adjustment_calc_step_logic": "Step決定ロジック",
+        "adjustment_calc_adjustment_logic": "調整手当ロジック",
+        "adjustment_calc_result_text": "まず、新グレードの中で現在の基本給を下回らない最初のStepを選びます。その後、新しい総支給額が現在の総支給額を下回る場合、その差額を調整手当として加算します。",
         "current_grade": "現在グレード",
         "current_step": "現在ステップ",
         "current_salary": "現在給与",
@@ -244,6 +273,7 @@ LANGUAGE_PACK = {
         "tab_diagram": "Visual Guide",
         "tab_table": "Wage Table",
         "tab_sim": "Promotion Simulation",
+        "tab_adjustment_calc": "Adjustment Allowance Calc",
         "tab_allowance_export": "Allowance Export",
         "tab_employee": "Employee Roster",
         "tab_admin": "Admin Settings",
@@ -301,6 +331,34 @@ LANGUAGE_PACK = {
         "download_excel": "Download Excel",
         "download_note": "You can distribute this as CSV or Excel as needed.",
         "sim_heading": "Promotion Simulation",
+        "sim_detail_heading": "Calculation Breakdown",
+        "sim_explanation_heading": "Calculation Explanation",
+        "sim_item": "Item",
+        "sim_amount": "Amount",
+        "sim_current_salary": "Current Salary",
+        "sim_target_salary": "Promoted Base Salary",
+        "adjustment_calc_heading": "Adjustment Allowance Calculation",
+        "adjustment_calc_text": "This tool finds the first step in the new grade that does not fall below the current base pay. If the new total pay is still lower than the current total pay, it adds an adjustment allowance to fill the gap. The result can be downloaded as a CSV ready for the employee roster upload tab.",
+        "adjustment_calc_employee_id": "Employee ID",
+        "adjustment_calc_name": "Name",
+        "adjustment_calc_area": "Area",
+        "adjustment_calc_target_grade": "New Grade",
+        "adjustment_calc_current_basic": "Current Base Pay",
+        "adjustment_calc_current_total": "Current Total Pay",
+        "adjustment_calc_other_allowance": "Other Allowance to Keep",
+        "adjustment_calc_active": "Output as active employee",
+        "adjustment_calc_run": "Calculate Adjustment Allowance",
+        "adjustment_calc_result": "Calculation Result",
+        "adjustment_calc_target_step": "Target Step",
+        "adjustment_calc_new_basic": "New Base Pay",
+        "adjustment_calc_university_allowance": "University Allowance",
+        "adjustment_calc_required_adjustment": "Required Adjustment Allowance",
+        "adjustment_calc_new_total": "New Total Pay",
+        "adjustment_calc_download": "Download CSV for Employee Roster Upload",
+        "adjustment_calc_download_excel": "Download Result Excel",
+        "adjustment_calc_step_logic": "Step Selection Logic",
+        "adjustment_calc_adjustment_logic": "Adjustment Allowance Logic",
+        "adjustment_calc_result_text": "First, the app selects the earliest step in the new grade whose base pay does not fall below the current base pay. Then, if the new total pay is still below the current total pay, the gap is added as an adjustment allowance.",
         "current_grade": "Current Grade",
         "current_step": "Current Step",
         "current_salary": "Current Salary",
@@ -791,6 +849,73 @@ def find_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]],
     }
 
 
+def find_step_for_minimum_base(wage_df: pd.DataFrame, grade: str, minimum_base: float) -> Dict[str, float]:
+    next_rows = wage_df[["Step", grade]].copy()
+    eligible = next_rows[next_rows[grade] >= float(minimum_base)]
+    if eligible.empty:
+        target_step = int(next_rows.iloc[-1]["Step"])
+        target_salary = float(next_rows.iloc[-1][grade])
+    else:
+        target_step = int(eligible.iloc[0]["Step"])
+        target_salary = float(eligible.iloc[0][grade])
+    return {
+        "target_step": target_step,
+        "target_salary": target_salary,
+    }
+
+
+def calculate_adjustment_allowance_result(
+    area: str,
+    target_grade: str,
+    current_basic_pay: float,
+    current_total_pay: float,
+    is_university_graduate: bool,
+    other_allowance: float,
+    area_wage_tables: Dict[str, pd.DataFrame],
+    university_allowance_amount: float,
+) -> Dict[str, float]:
+    wage_df = area_wage_tables[area]
+    step_result = find_step_for_minimum_base(wage_df, target_grade, current_basic_pay)
+    target_step = int(step_result["target_step"])
+    new_basic_pay = float(step_result["target_salary"])
+    university_allowance = float(university_allowance_amount if is_university_graduate else 0.0)
+    subtotal_before_adjustment = new_basic_pay + float(other_allowance) + university_allowance
+    adjustment_allowance = max(float(current_total_pay) - subtotal_before_adjustment, 0.0)
+    new_total_pay = subtotal_before_adjustment + adjustment_allowance
+    return {
+        "area": area,
+        "target_grade": target_grade,
+        "target_step": target_step,
+        "current_basic_pay": float(current_basic_pay),
+        "current_total_pay": float(current_total_pay),
+        "new_basic_pay": new_basic_pay,
+        "other_allowance": float(other_allowance),
+        "university_allowance": university_allowance,
+        "adjustment_allowance": adjustment_allowance,
+        "new_total_pay": new_total_pay,
+        "is_university_graduate": int(1 if is_university_graduate else 0),
+    }
+
+
+def build_adjustment_upload_row(
+    employee_id: str,
+    name: str,
+    result: Dict[str, float],
+    active: bool = True,
+) -> pd.DataFrame:
+    return pd.DataFrame([{
+        "Employee ID": employee_id,
+        "Name": name,
+        "Area": result["area"],
+        "Grade": result["target_grade"],
+        "Step": int(result["target_step"]),
+        "University Graduate": int(result["is_university_graduate"]),
+        "Adjustment Allowance": float(result["adjustment_allowance"]),
+        "Other Allowance": float(result["other_allowance"]),
+        "Active": int(1 if active else 0),
+    }])
+
+
 def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adjustment_amount: float, include_university: bool, university_amount: float, include_other: bool, other_amount: float) -> pd.DataFrame:
     out = df.copy()
     allowance_total = 0.0
@@ -985,6 +1110,8 @@ if "selected_area" not in st.session_state:
     st.session_state.selected_area = "Davao"
 if "employee_roster_df" not in st.session_state:
     st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
+if "adjustment_upload_df" not in st.session_state:
+    st.session_state.adjustment_upload_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
 
 # =========================================================
 # Simple visual styling
@@ -1114,11 +1241,12 @@ with m2:
 with m3:
     st.metric(lang_text("エリア数", "Areas"), len(AREAS))
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     t("tab_overview"),
     t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
+    t("tab_adjustment_calc"),
     t("tab_allowance_export"),
     t("tab_employee"),
     t("tab_admin"),
@@ -1243,94 +1371,192 @@ with tab4:
         university_allowance = st.number_input(t("univ_allowance"), min_value=0.0, value=0.0, step=100.0)
     with a3:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
-if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
-    result = find_promotion_result(current_df, current_params, current_grade, int(current_step))
-    if result is None:
-        st.warning(t("no_next_grade"))
-    else:
-        total_allowance = adjustment_allowance + other_allowance + (university_allowance if is_univ else 0.0)
-        final_salary = result["target_salary"] + total_allowance
-
-        ap_amount = float(current_params[current_grade]["ap"])
-        pp_amount = float(current_params[current_grade]["pp"])
-        current_salary = float(result["current_salary"])
-        minimum_required = float(result["minimum_required"])
-        target_grade = result["target_grade"]
-        target_step = int(result["target_step"])
-        target_salary = float(result["target_salary"])
-
-        r1, r2, r3 = st.columns(3)
-        with r1:
-            st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
-        with r2:
-            st.metric(t("gs_after"), f"{target_grade}-S{target_step}")
-        with r3:
-            st.metric(t("final_salary"), format_money(final_salary))
-
-        st.subheader(t("promotion_flow"))
-        st.graphviz_chart(
-            promotion_diagram(current_grade, int(current_step), target_grade, target_step)
-        )
-
-        # 追加：数字つき説明文
-        if st.session_state.lang == "日本語":
-            explanation = (
-                f"{current_grade}-S{current_step} の給与は {format_money(current_salary)} です。"
-                f"AP は {format_money(ap_amount)}、PP は {format_money(pp_amount)} なので、"
-                f"昇格時の最低必要額は "
-                f"{format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} "
-                f"= {format_money(minimum_required)} です。"
-                f"そのため、{target_grade} の中でこの金額を下回らず、最も近い金額となるのは "
-                f"{target_grade}-S{target_step}（{format_money(target_salary)}）です。"
-            )
+    if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
+        result = find_promotion_result(current_df, current_params, current_grade, int(current_step))
+        if result is None:
+            st.warning(t("no_next_grade"))
         else:
-            explanation = (
-                f"The salary at {current_grade}-S{current_step} is {format_money(current_salary)}. "
-                f"AP is {format_money(ap_amount)} and PP is {format_money(pp_amount)}, so the minimum required amount is "
-                f"{format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} "
-                f"= {format_money(minimum_required)}. "
-                f"Therefore, the closest step in {target_grade} that does not fall below this amount is "
-                f"{target_grade}-S{target_step} ({format_money(target_salary)})."
-            )
+            ap_amount = float(current_params[current_grade]["ap"])
+            pp_amount = float(current_params[current_grade]["pp"])
+            current_salary = float(result["current_salary"])
+            minimum_required = float(result["minimum_required"])
+            target_grade = str(result["target_grade"])
+            target_step = int(result["target_step"])
+            target_salary = float(result["target_salary"])
+            total_allowance = adjustment_allowance + other_allowance + (university_allowance if is_univ else 0.0)
+            final_salary = target_salary + total_allowance
 
-        st.info(explanation)
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
+            with r2:
+                st.metric(t("gs_after"), f"{target_grade}-S{target_step}")
+            with r3:
+                st.metric(t("final_salary"), format_money(final_salary))
 
-        # 追加：計算内訳を表でも表示
-        breakdown_df = pd.DataFrame([
-            {
-                lang_text("項目", "Item"): lang_text("現在給与", "Current Salary"),
-                lang_text("金額", "Amount"): current_salary,
-            },
-            {
-                lang_text("項目", "Item"): "AP",
-                lang_text("金額", "Amount"): ap_amount,
-            },
-            {
-                lang_text("項目", "Item"): "PP",
-                lang_text("金額", "Amount"): pp_amount,
-            },
-            {
-                lang_text("項目", "Item"): lang_text("最低必要額", "Minimum Required"),
-                lang_text("金額", "Amount"): minimum_required,
-            },
-            {
-                lang_text("項目", "Item"): lang_text("昇格後基本給", "Promoted Base Salary"),
-                lang_text("金額", "Amount"): target_salary,
-            },
-        ])
-        breakdown_display = breakdown_df.copy()
-        amount_col = lang_text("金額", "Amount")
-        breakdown_display[amount_col] = breakdown_display[amount_col].apply(format_money)
-        st.dataframe(breakdown_display, use_container_width=True, hide_index=True)
+            st.subheader(t("promotion_flow"))
+            st.graphviz_chart(promotion_diagram(current_grade, int(current_step), target_grade, target_step))
 
-        search_df = current_df[["Step", target_grade]].copy()
-        search_df["Eligible"] = search_df[target_grade] >= minimum_required
-        st.subheader(t("step_search_result"))
-        st.dataframe(search_df, use_container_width=True, hide_index=True)
+            st.subheader(t("sim_explanation_heading"))
+            if st.session_state.lang == "日本語":
+                explanation = (
+                    f"{current_grade}-S{current_step} の給与は {format_money(current_salary)} です。"
+                    f"AP は {format_money(ap_amount)}、PP は {format_money(pp_amount)} なので、"
+                    f"昇格時の最低必要額は {format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} = {format_money(minimum_required)} です。"
+                    f"そのため、{target_grade} の中でこの金額を下回らず、最も近い金額となるのは {target_grade}-S{target_step}（{format_money(target_salary)}）です。"
+                )
+            else:
+                explanation = (
+                    f"The salary at {current_grade}-S{current_step} is {format_money(current_salary)}. "
+                    f"AP is {format_money(ap_amount)} and PP is {format_money(pp_amount)}, so the minimum required amount is "
+                    f"{format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} = {format_money(minimum_required)}. "
+                    f"Therefore, the closest step in {target_grade} that does not fall below this amount is {target_grade}-S{target_step} ({format_money(target_salary)})."
+                )
+            st.info(explanation)
+
+            st.subheader(t("sim_detail_heading"))
+            breakdown_df = pd.DataFrame([
+                {t("sim_item"): t("sim_current_salary"), t("sim_amount"): current_salary},
+                {t("sim_item"): "AP", t("sim_amount"): ap_amount},
+                {t("sim_item"): "PP", t("sim_amount"): pp_amount},
+                {t("sim_item"): t("min_required"), t("sim_amount"): minimum_required},
+                {t("sim_item"): t("sim_target_salary"), t("sim_amount"): target_salary},
+            ])
+            breakdown_display = breakdown_df.copy()
+            breakdown_display[t("sim_amount")] = breakdown_display[t("sim_amount")].apply(format_money)
+            st.dataframe(breakdown_display, use_container_width=True, hide_index=True)
+
+            search_df = current_df[["Step", target_grade]].copy()
+            search_df["Eligible"] = search_df[target_grade] >= minimum_required
+            st.subheader(t("step_search_result"))
+            st.dataframe(search_df, use_container_width=True, hide_index=True)
+
 # =========================================================
-# Tab 5: Allowance export
+# Tab 5: Adjustment allowance calculation
 # =========================================================
 with tab5:
+    st.subheader(t("adjustment_calc_heading"))
+    st.markdown(f"<div class='info-card'>{t('adjustment_calc_text')}</div>", unsafe_allow_html=True)
+    st.caption(f"{lang_text('共通の大卒手当設定', 'Shared university allowance setting')}: {lang_text('下の入力値を使って計算します。', 'The amount entered below is used in the calculation.')}")
+
+    calc_c1, calc_c2 = st.columns(2)
+    with calc_c1:
+        calc_employee_id = st.text_input(t("adjustment_calc_employee_id"), value="TEMP001", key="adj_emp_id")
+        calc_name = st.text_input(t("adjustment_calc_name"), value="Sample Employee", key="adj_emp_name")
+        calc_area = st.selectbox(t("adjustment_calc_area"), AREAS, format_func=area_label, key="adj_area")
+        calc_target_grade = st.selectbox(t("adjustment_calc_target_grade"), GRADES, index=3, key="adj_target_grade")
+        calc_is_univ = st.checkbox(t("is_univ"), value=False, key="adj_is_univ")
+    with calc_c2:
+        calc_current_basic = st.number_input(t("adjustment_calc_current_basic"), min_value=0.0, value=20000.0, step=100.0, key="adj_current_basic")
+        calc_current_total = st.number_input(t("adjustment_calc_current_total"), min_value=0.0, value=22000.0, step=100.0, key="adj_current_total")
+        calc_other_allowance = st.number_input(t("adjustment_calc_other_allowance"), min_value=0.0, value=0.0, step=100.0, key="adj_other_allowance")
+        calc_university_allowance = st.number_input(t("univ_allowance"), min_value=0.0, value=0.0, step=100.0, key="adj_univ_allowance")
+        calc_active = st.checkbox(t("adjustment_calc_active"), value=True, key="adj_active")
+
+    if st.button(t("adjustment_calc_run"), use_container_width=True, key="adjustment_calc_run_button"):
+        result = calculate_adjustment_allowance_result(
+            area=calc_area,
+            target_grade=calc_target_grade,
+            current_basic_pay=calc_current_basic,
+            current_total_pay=calc_current_total,
+            is_university_graduate=calc_is_univ,
+            other_allowance=calc_other_allowance,
+            area_wage_tables=all_area_wage_tables(),
+            university_allowance_amount=calc_university_allowance,
+        )
+        st.subheader(t("adjustment_calc_result"))
+        rr1, rr2, rr3, rr4 = st.columns(4)
+        with rr1:
+            st.metric(t("adjustment_calc_target_step"), f"{calc_target_grade}-S{int(result['target_step'])}")
+        with rr2:
+            st.metric(t("adjustment_calc_new_basic"), format_money(result["new_basic_pay"]))
+        with rr3:
+            st.metric(t("adjustment_calc_required_adjustment"), format_money(result["adjustment_allowance"]))
+        with rr4:
+            st.metric(t("adjustment_calc_new_total"), format_money(result["new_total_pay"]))
+
+        st.info(t("adjustment_calc_result_text"))
+
+        if st.session_state.lang == "日本語":
+            step_logic_text = (
+                f"{area_label(calc_area)} の {calc_target_grade} で、現在の基本給 {format_money(result['current_basic_pay'])} を下回らない最初のStepを探します。"
+                f"その結果、{calc_target_grade}-S{int(result['target_step'])} の基本給 {format_money(result['new_basic_pay'])} が採用されます。"
+            )
+            adjustment_logic_text = (
+                f"新基本給 {format_money(result['new_basic_pay'])} + その他手当 {format_money(result['other_allowance'])} + 大卒手当 {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])} です。"
+                f"これが現在の総支給額 {format_money(result['current_total_pay'])} を下回るため、差額 {format_money(result['adjustment_allowance'])} を調整手当として加えます。" if result['adjustment_allowance'] > 0 else
+                f"新基本給 {format_money(result['new_basic_pay'])} + その他手当 {format_money(result['other_allowance'])} + 大卒手当 {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])} なので、現在の総支給額 {format_money(result['current_total_pay'])} を下回りません。調整手当は {format_money(0)} です。"
+            )
+        else:
+            step_logic_text = (
+                f"In {area_label(calc_area)}, the app looks for the first step in {calc_target_grade} whose base pay does not fall below the current base pay of {format_money(result['current_basic_pay'])}. "
+                f"As a result, {calc_target_grade}-S{int(result['target_step'])} with a base pay of {format_money(result['new_basic_pay'])} is selected."
+            )
+            adjustment_logic_text = (
+                f"New base pay {format_money(result['new_basic_pay'])} + other allowance {format_money(result['other_allowance'])} + university allowance {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])}. "
+                f"Because this is below the current total pay of {format_money(result['current_total_pay'])}, the gap of {format_money(result['adjustment_allowance'])} is added as adjustment allowance." if result['adjustment_allowance'] > 0 else
+                f"New base pay {format_money(result['new_basic_pay'])} + other allowance {format_money(result['other_allowance'])} + university allowance {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])}. "
+                f"This does not fall below the current total pay of {format_money(result['current_total_pay'])}, so the adjustment allowance is {format_money(0)}."
+            )
+
+        st.markdown(f"**{t('adjustment_calc_step_logic')}**")
+        st.write(step_logic_text)
+        st.markdown(f"**{t('adjustment_calc_adjustment_logic')}**")
+        st.write(adjustment_logic_text)
+
+        calc_breakdown_df = pd.DataFrame([
+            {t("sim_item"): t("adjustment_calc_current_basic"), t("sim_amount"): result["current_basic_pay"]},
+            {t("sim_item"): t("adjustment_calc_current_total"), t("sim_amount"): result["current_total_pay"]},
+            {t("sim_item"): t("adjustment_calc_new_basic"), t("sim_amount"): result["new_basic_pay"]},
+            {t("sim_item"): t("adjustment_calc_other_allowance"), t("sim_amount"): result["other_allowance"]},
+            {t("sim_item"): t("adjustment_calc_university_allowance"), t("sim_amount"): result["university_allowance"]},
+            {t("sim_item"): t("adjustment_calc_required_adjustment"), t("sim_amount"): result["adjustment_allowance"]},
+            {t("sim_item"): t("adjustment_calc_new_total"), t("sim_amount"): result["new_total_pay"]},
+        ])
+        calc_breakdown_display = calc_breakdown_df.copy()
+        calc_breakdown_display[t("sim_amount")] = calc_breakdown_display[t("sim_amount")].apply(format_money)
+        st.dataframe(calc_breakdown_display, use_container_width=True, hide_index=True)
+
+        upload_df = build_adjustment_upload_row(
+            employee_id=calc_employee_id.strip() or "TEMP001",
+            name=calc_name.strip() or "Sample Employee",
+            result=result,
+            active=calc_active,
+        )
+        st.session_state.adjustment_upload_df = upload_df.copy()
+        upload_preview = upload_df.copy()
+        for col in ["Adjustment Allowance", "Other Allowance"]:
+            upload_preview[col] = upload_preview[col].apply(format_money)
+        st.markdown(f"**{lang_text('従業員名簿アップロード用プレビュー', 'Preview for employee roster upload')}**")
+        st.dataframe(upload_preview, use_container_width=True, hide_index=True)
+
+        upload_csv = upload_df.to_csv(index=False).encode("utf-8-sig")
+        upload_excel = make_excel_file(upload_df)
+        cd1, cd2 = st.columns(2)
+        with cd1:
+            st.download_button(
+                t("adjustment_calc_download"),
+                data=upload_csv,
+                file_name=f"adjustment_upload_{calc_employee_id.strip() or 'temp'}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        with cd2:
+            if upload_excel is not None:
+                st.download_button(
+                    t("adjustment_calc_download_excel"),
+                    data=upload_excel,
+                    file_name=f"adjustment_upload_{calc_employee_id.strip() or 'temp'}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+            else:
+                st.info(t("excel_unavailable"))
+
+# =========================================================
+# Tab 6: Allowance export
+# =========================================================
+with tab6:
     st.subheader(t("allowance_export_heading"))
     st.write(f"{t('allowance_export_text')} ({area_label(st.session_state.selected_area)})")
     current_df = current_area_wage_df()
@@ -1358,9 +1584,9 @@ with tab5:
             st.info(t("excel_unavailable"))
 
 # =========================================================
-# Tab 6: Employee roster
+# Tab 7: Employee roster
 # =========================================================
-with tab6:
+with tab7:
     st.subheader(t("employee_heading"))
     st.markdown(f"<div class='info-card'>{t('employee_text')} {lang_text('エリア列を含めると、そのエリアの賃金テーブルが自動適用されます。', 'If the roster includes an Area column, the matching area wage table is applied automatically.')}</div>", unsafe_allow_html=True)
     template_emp_csv = build_employee_csv_template().to_csv(index=False).encode("utf-8-sig")
@@ -1435,7 +1661,7 @@ with tab6:
 # =========================================================
 # Tab 7: Admin
 # =========================================================
-with tab7:
+with tab8:
     st.subheader(t("admin_heading"))
     st.markdown(f"<div class='info-card'>{t('admin_text')}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='warn-card'>{t('warning_rebuild')}</div>", unsafe_allow_html=True)
