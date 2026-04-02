@@ -155,7 +155,7 @@ LANGUAGE_PACK = {
         "sim_current_salary": "現在給与",
         "sim_target_salary": "昇格後基本給",
         "adjustment_calc_heading": "調整手当計算",
-        "adjustment_calc_text": "今の基本給を下回らない新グレードの Step を探し、その後、総支給額が今より下がる場合に必要な調整手当を計算します。計算結果はそのまま従業員名簿アップロード用CSVとしてダウンロードできます。",
+        "adjustment_calc_text": "CSVをアップロードすると、複数人分の調整手当を一括計算し、そのまま従業員名簿アップロード用CSVとしてダウンロードできます。",
         "adjustment_calc_employee_id": "社員ID",
         "adjustment_calc_name": "氏名",
         "adjustment_calc_area": "エリア",
@@ -164,18 +164,18 @@ LANGUAGE_PACK = {
         "adjustment_calc_current_total": "現在の総支給額",
         "adjustment_calc_other_allowance": "その他手当（維持する額）",
         "adjustment_calc_active": "在籍者として出力",
-        "adjustment_calc_run": "調整手当を計算",
+        "adjustment_calc_run": "CSVを一括計算",
         "adjustment_calc_result": "計算結果",
         "adjustment_calc_target_step": "適用Step",
         "adjustment_calc_new_basic": "新基本給",
         "adjustment_calc_university_allowance": "大卒手当",
         "adjustment_calc_required_adjustment": "必要な調整手当",
         "adjustment_calc_new_total": "新総支給額",
-        "adjustment_calc_download": "従業員名簿アップロード用CSVをダウンロード",
-        "adjustment_calc_download_excel": "計算結果Excelをダウンロード",
+        "adjustment_calc_download": "一括計算結果CSVをダウンロード",
+        "adjustment_calc_download_excel": "一括計算結果Excelをダウンロード",
         "adjustment_calc_step_logic": "Step決定ロジック",
         "adjustment_calc_adjustment_logic": "調整手当ロジック",
-        "adjustment_calc_result_text": "まず、新グレードの中で現在の基本給を下回らない最初のStepを選びます。その後、新しい総支給額が現在の総支給額を下回る場合、その差額を調整手当として加算します。",
+        "adjustment_calc_result_text": "出力ファイルはそのまま従業員名簿タブへアップロードできます。",
         "current_grade": "現在グレード",
         "current_step": "現在ステップ",
         "current_salary": "現在給与",
@@ -338,7 +338,7 @@ LANGUAGE_PACK = {
         "sim_current_salary": "Current Salary",
         "sim_target_salary": "Promoted Base Salary",
         "adjustment_calc_heading": "Adjustment Allowance Calculation",
-        "adjustment_calc_text": "This tool finds the first step in the new grade that does not fall below the current base pay. If the new total pay is still lower than the current total pay, it adds an adjustment allowance to fill the gap. The result can be downloaded as a CSV ready for the employee roster upload tab.",
+        "adjustment_calc_text": "Upload a CSV to calculate adjustment allowance for multiple employees at once, then download the result as a CSV ready for the employee roster upload tab.",
         "adjustment_calc_employee_id": "Employee ID",
         "adjustment_calc_name": "Name",
         "adjustment_calc_area": "Area",
@@ -347,15 +347,15 @@ LANGUAGE_PACK = {
         "adjustment_calc_current_total": "Current Total Pay",
         "adjustment_calc_other_allowance": "Other Allowance to Keep",
         "adjustment_calc_active": "Output as active employee",
-        "adjustment_calc_run": "Calculate Adjustment Allowance",
+        "adjustment_calc_run": "Run Batch CSV Calculation",
         "adjustment_calc_result": "Calculation Result",
         "adjustment_calc_target_step": "Target Step",
         "adjustment_calc_new_basic": "New Base Pay",
         "adjustment_calc_university_allowance": "University Allowance",
         "adjustment_calc_required_adjustment": "Required Adjustment Allowance",
         "adjustment_calc_new_total": "New Total Pay",
-        "adjustment_calc_download": "Download CSV for Employee Roster Upload",
-        "adjustment_calc_download_excel": "Download Result Excel",
+        "adjustment_calc_download": "Download Batch Result CSV",
+        "adjustment_calc_download_excel": "Download Batch Result Excel",
         "adjustment_calc_step_logic": "Step Selection Logic",
         "adjustment_calc_adjustment_logic": "Adjustment Allowance Logic",
         "adjustment_calc_result_text": "First, the app selects the earliest step in the new grade whose base pay does not fall below the current base pay. Then, if the new total pay is still below the current total pay, the gap is added as an adjustment allowance.",
@@ -545,6 +545,85 @@ def build_employee_csv_template() -> pd.DataFrame:
             "Active": 1,
         }
     ])
+
+
+def build_adjustment_batch_csv_template() -> pd.DataFrame:
+    return pd.DataFrame([
+        {
+            "Employee ID": "E001",
+            "Name": "Sample Employee",
+            "Area": "Davao",
+            "New Grade": "G4",
+            "Current Basic Pay": 20000,
+            "Current Total Pay": 22000,
+            "University Graduate": 1,
+            "Other Allowance": 0,
+            "Active": 1,
+        }
+    ])
+
+
+def validate_adjustment_batch_csv(df: pd.DataFrame) -> pd.DataFrame:
+    required_cols = [
+        "Employee ID",
+        "Name",
+        "Area",
+        "New Grade",
+        "Current Basic Pay",
+        "Current Total Pay",
+        "University Graduate",
+        "Other Allowance",
+        "Active",
+    ]
+    if list(df.columns) != required_cols:
+        raise ValueError(f"Columns must be exactly: {required_cols}")
+
+    out = df.copy()
+    out["Area"] = out["Area"].astype(str)
+    if not out["Area"].isin(AREAS).all():
+        raise ValueError(f"Area column contains invalid area. Allowed: {AREAS}")
+
+    out["New Grade"] = out["New Grade"].astype(str)
+    if not out["New Grade"].isin(GRADES).all():
+        raise ValueError(f"New Grade column contains invalid grade. Allowed: {GRADES}")
+
+    for col in ["Current Basic Pay", "Current Total Pay", "University Graduate", "Other Allowance", "Active"]:
+        out[col] = pd.to_numeric(out[col], errors="raise")
+
+    out["University Graduate"] = out["University Graduate"].astype(int)
+    out["Active"] = out["Active"].astype(int)
+    return out
+
+
+def build_adjustment_batch_upload_df(
+    source_df: pd.DataFrame,
+    area_wage_tables: Dict[str, pd.DataFrame],
+    university_allowance_amount: float,
+) -> pd.DataFrame:
+    rows = []
+    for _, row in source_df.iterrows():
+        result = calculate_adjustment_allowance_result(
+            area=str(row["Area"]),
+            target_grade=str(row["New Grade"]),
+            current_basic_pay=float(row["Current Basic Pay"]),
+            current_total_pay=float(row["Current Total Pay"]),
+            is_university_graduate=int(row["University Graduate"]) == 1,
+            other_allowance=float(row["Other Allowance"]),
+            area_wage_tables=area_wage_tables,
+            university_allowance_amount=university_allowance_amount,
+        )
+        rows.append({
+            "Employee ID": str(row["Employee ID"]),
+            "Name": str(row["Name"]),
+            "Area": result["area"],
+            "Grade": result["target_grade"],
+            "Step": int(result["target_step"]),
+            "University Graduate": int(result["is_university_graduate"]),
+            "Adjustment Allowance": float(result["adjustment_allowance"]),
+            "Other Allowance": float(result["other_allowance"]),
+            "Active": int(row["Active"]),
+        })
+    return pd.DataFrame(rows)
 
 
 def validate_imported_settings_csv(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
@@ -1437,121 +1516,84 @@ with tab4:
 with tab5:
     st.subheader(t("adjustment_calc_heading"))
     st.markdown(f"<div class='info-card'>{t('adjustment_calc_text')}</div>", unsafe_allow_html=True)
-    st.caption(f"{lang_text('共通の大卒手当設定', 'Shared university allowance setting')}: {lang_text('下の入力値を使って計算します。', 'The amount entered below is used in the calculation.')}")
+    st.caption(t("adjustment_calc_result_text"))
 
-    calc_c1, calc_c2 = st.columns(2)
-    with calc_c1:
-        calc_employee_id = st.text_input(t("adjustment_calc_employee_id"), value="TEMP001", key="adj_emp_id")
-        calc_name = st.text_input(t("adjustment_calc_name"), value="Sample Employee", key="adj_emp_name")
-        calc_area = st.selectbox(t("adjustment_calc_area"), AREAS, format_func=area_label, key="adj_area")
-        calc_target_grade = st.selectbox(t("adjustment_calc_target_grade"), GRADES, index=3, key="adj_target_grade")
-        calc_is_univ = st.checkbox(t("is_univ"), value=False, key="adj_is_univ")
-    with calc_c2:
-        calc_current_basic = st.number_input(t("adjustment_calc_current_basic"), min_value=0.0, value=20000.0, step=100.0, key="adj_current_basic")
-        calc_current_total = st.number_input(t("adjustment_calc_current_total"), min_value=0.0, value=22000.0, step=100.0, key="adj_current_total")
-        calc_other_allowance = st.number_input(t("adjustment_calc_other_allowance"), min_value=0.0, value=0.0, step=100.0, key="adj_other_allowance")
-        calc_university_allowance = st.number_input(t("univ_allowance"), min_value=0.0, value=0.0, step=100.0, key="adj_univ_allowance")
-        calc_active = st.checkbox(t("adjustment_calc_active"), value=True, key="adj_active")
+    batch_template_csv = build_adjustment_batch_csv_template().to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        lang_text("一括計算CSVテンプレートをダウンロード", "Download batch calculation CSV template"),
+        data=batch_template_csv,
+        file_name="adjustment_batch_template.csv",
+        mime="text/csv",
+    )
+
+    calc_university_allowance = st.number_input(
+        t("univ_allowance"),
+        min_value=0.0,
+        value=0.0,
+        step=100.0,
+        key="adj_univ_allowance_batch",
+    )
+    uploaded_adj_csv = st.file_uploader(
+        lang_text("調整手当計算CSVをアップロード", "Upload adjustment calculation CSV"),
+        type=["csv"],
+        key="adj_batch_csv_upload",
+    )
+
+    if uploaded_adj_csv is not None:
+        try:
+            uploaded_adj_csv.seek(0)
+            preview_adj_df = pd.read_csv(uploaded_adj_csv)
+            st.markdown(f"**{lang_text('CSVプレビュー', 'CSV Preview')}**")
+            st.dataframe(preview_adj_df, use_container_width=True, hide_index=True)
+        except Exception:
+            st.error(lang_text("CSVの読み込みに失敗しました。", "Failed to read the CSV."))
 
     if st.button(t("adjustment_calc_run"), use_container_width=True, key="adjustment_calc_run_button"):
-        result = calculate_adjustment_allowance_result(
-            area=calc_area,
-            target_grade=calc_target_grade,
-            current_basic_pay=calc_current_basic,
-            current_total_pay=calc_current_total,
-            is_university_graduate=calc_is_univ,
-            other_allowance=calc_other_allowance,
-            area_wage_tables=all_area_wage_tables(),
-            university_allowance_amount=calc_university_allowance,
-        )
-        st.subheader(t("adjustment_calc_result"))
-        rr1, rr2, rr3, rr4 = st.columns(4)
-        with rr1:
-            st.metric(t("adjustment_calc_target_step"), f"{calc_target_grade}-S{int(result['target_step'])}")
-        with rr2:
-            st.metric(t("adjustment_calc_new_basic"), format_money(result["new_basic_pay"]))
-        with rr3:
-            st.metric(t("adjustment_calc_required_adjustment"), format_money(result["adjustment_allowance"]))
-        with rr4:
-            st.metric(t("adjustment_calc_new_total"), format_money(result["new_total_pay"]))
-
-        st.info(t("adjustment_calc_result_text"))
-
-        if st.session_state.lang == "日本語":
-            step_logic_text = (
-                f"{area_label(calc_area)} の {calc_target_grade} で、現在の基本給 {format_money(result['current_basic_pay'])} を下回らない最初のStepを探します。"
-                f"その結果、{calc_target_grade}-S{int(result['target_step'])} の基本給 {format_money(result['new_basic_pay'])} が採用されます。"
-            )
-            adjustment_logic_text = (
-                f"新基本給 {format_money(result['new_basic_pay'])} + その他手当 {format_money(result['other_allowance'])} + 大卒手当 {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])} です。"
-                f"これが現在の総支給額 {format_money(result['current_total_pay'])} を下回るため、差額 {format_money(result['adjustment_allowance'])} を調整手当として加えます。" if result['adjustment_allowance'] > 0 else
-                f"新基本給 {format_money(result['new_basic_pay'])} + その他手当 {format_money(result['other_allowance'])} + 大卒手当 {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])} なので、現在の総支給額 {format_money(result['current_total_pay'])} を下回りません。調整手当は {format_money(0)} です。"
-            )
+        if uploaded_adj_csv is None:
+            st.warning(lang_text("CSVファイルを選択してください。", "Please choose a CSV file."))
         else:
-            step_logic_text = (
-                f"In {area_label(calc_area)}, the app looks for the first step in {calc_target_grade} whose base pay does not fall below the current base pay of {format_money(result['current_basic_pay'])}. "
-                f"As a result, {calc_target_grade}-S{int(result['target_step'])} with a base pay of {format_money(result['new_basic_pay'])} is selected."
-            )
-            adjustment_logic_text = (
-                f"New base pay {format_money(result['new_basic_pay'])} + other allowance {format_money(result['other_allowance'])} + university allowance {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])}. "
-                f"Because this is below the current total pay of {format_money(result['current_total_pay'])}, the gap of {format_money(result['adjustment_allowance'])} is added as adjustment allowance." if result['adjustment_allowance'] > 0 else
-                f"New base pay {format_money(result['new_basic_pay'])} + other allowance {format_money(result['other_allowance'])} + university allowance {format_money(result['university_allowance'])} = {format_money(result['new_basic_pay'] + result['other_allowance'] + result['university_allowance'])}. "
-                f"This does not fall below the current total pay of {format_money(result['current_total_pay'])}, so the adjustment allowance is {format_money(0)}."
-            )
-
-        st.markdown(f"**{t('adjustment_calc_step_logic')}**")
-        st.write(step_logic_text)
-        st.markdown(f"**{t('adjustment_calc_adjustment_logic')}**")
-        st.write(adjustment_logic_text)
-
-        calc_breakdown_df = pd.DataFrame([
-            {t("sim_item"): t("adjustment_calc_current_basic"), t("sim_amount"): result["current_basic_pay"]},
-            {t("sim_item"): t("adjustment_calc_current_total"), t("sim_amount"): result["current_total_pay"]},
-            {t("sim_item"): t("adjustment_calc_new_basic"), t("sim_amount"): result["new_basic_pay"]},
-            {t("sim_item"): t("adjustment_calc_other_allowance"), t("sim_amount"): result["other_allowance"]},
-            {t("sim_item"): t("adjustment_calc_university_allowance"), t("sim_amount"): result["university_allowance"]},
-            {t("sim_item"): t("adjustment_calc_required_adjustment"), t("sim_amount"): result["adjustment_allowance"]},
-            {t("sim_item"): t("adjustment_calc_new_total"), t("sim_amount"): result["new_total_pay"]},
-        ])
-        calc_breakdown_display = calc_breakdown_df.copy()
-        calc_breakdown_display[t("sim_amount")] = calc_breakdown_display[t("sim_amount")].apply(format_money)
-        st.dataframe(calc_breakdown_display, use_container_width=True, hide_index=True)
-
-        upload_df = build_adjustment_upload_row(
-            employee_id=calc_employee_id.strip() or "TEMP001",
-            name=calc_name.strip() or "Sample Employee",
-            result=result,
-            active=calc_active,
-        )
-        st.session_state.adjustment_upload_df = upload_df.copy()
-        upload_preview = upload_df.copy()
-        for col in ["Adjustment Allowance", "Other Allowance"]:
-            upload_preview[col] = upload_preview[col].apply(format_money)
-        st.markdown(f"**{lang_text('従業員名簿アップロード用プレビュー', 'Preview for employee roster upload')}**")
-        st.dataframe(upload_preview, use_container_width=True, hide_index=True)
-
-        upload_csv = upload_df.to_csv(index=False).encode("utf-8-sig")
-        upload_excel = make_excel_file(upload_df)
-        cd1, cd2 = st.columns(2)
-        with cd1:
-            st.download_button(
-                t("adjustment_calc_download"),
-                data=upload_csv,
-                file_name=f"adjustment_upload_{calc_employee_id.strip() or 'temp'}.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
-        with cd2:
-            if upload_excel is not None:
-                st.download_button(
-                    t("adjustment_calc_download_excel"),
-                    data=upload_excel,
-                    file_name=f"adjustment_upload_{calc_employee_id.strip() or 'temp'}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+            try:
+                uploaded_adj_csv.seek(0)
+                source_df = pd.read_csv(uploaded_adj_csv)
+                validated_df = validate_adjustment_batch_csv(source_df)
+                upload_df = build_adjustment_batch_upload_df(
+                    validated_df,
+                    area_wage_tables=all_area_wage_tables(),
+                    university_allowance_amount=calc_university_allowance,
                 )
-            else:
-                st.info(t("excel_unavailable"))
+                st.session_state.adjustment_upload_df = upload_df.copy()
+
+                preview_df = upload_df.copy()
+                for col in ["Adjustment Allowance", "Other Allowance"]:
+                    if col in preview_df.columns:
+                        preview_df[col] = preview_df[col].apply(format_money)
+                st.markdown(f"**{lang_text('出力プレビュー', 'Output Preview')}**")
+                st.dataframe(preview_df, use_container_width=True, hide_index=True)
+
+                upload_csv = upload_df.to_csv(index=False).encode("utf-8-sig")
+                upload_excel = make_excel_file(upload_df)
+                cd1, cd2 = st.columns(2)
+                with cd1:
+                    st.download_button(
+                        t("adjustment_calc_download"),
+                        data=upload_csv,
+                        file_name="adjustment_batch_upload.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
+                with cd2:
+                    if upload_excel is not None:
+                        st.download_button(
+                            t("adjustment_calc_download_excel"),
+                            data=upload_excel,
+                            file_name="adjustment_batch_upload.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.info(t("excel_unavailable"))
+            except Exception as e:
+                st.error(f"{lang_text('一括計算CSVの形式が正しくありません。', 'The batch calculation CSV format is invalid.')}\n\nDetail: {str(e)}")
 
 # =========================================================
 # Tab 6: Allowance export
