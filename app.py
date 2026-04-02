@@ -1243,27 +1243,90 @@ with tab4:
         university_allowance = st.number_input(t("univ_allowance"), min_value=0.0, value=0.0, step=100.0)
     with a3:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
-    if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
-        result = find_promotion_result(current_df, current_params, current_grade, int(current_step))
-        if result is None:
-            st.warning(t("no_next_grade"))
-        else:
-            total_allowance = adjustment_allowance + other_allowance + (university_allowance if is_univ else 0.0)
-            final_salary = result["target_salary"] + total_allowance
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
-            with r2:
-                st.metric(t("gs_after"), f"{result['target_grade']}-S{result['target_step']}")
-            with r3:
-                st.metric(t("final_salary"), format_money(final_salary))
-            st.subheader(t("promotion_flow"))
-            st.graphviz_chart(promotion_diagram(current_grade, int(current_step), result["target_grade"], int(result["target_step"])))
-            search_df = current_df[["Step", result["target_grade"]]].copy()
-            search_df["Eligible"] = search_df[result["target_grade"]] >= result["minimum_required"]
-            st.subheader(t("step_search_result"))
-            st.dataframe(search_df, use_container_width=True, hide_index=True)
+if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
+    result = find_promotion_result(current_df, current_params, current_grade, int(current_step))
+    if result is None:
+        st.warning(t("no_next_grade"))
+    else:
+        total_allowance = adjustment_allowance + other_allowance + (university_allowance if is_univ else 0.0)
+        final_salary = result["target_salary"] + total_allowance
 
+        ap_amount = float(current_params[current_grade]["ap"])
+        pp_amount = float(current_params[current_grade]["pp"])
+        current_salary = float(result["current_salary"])
+        minimum_required = float(result["minimum_required"])
+        target_grade = result["target_grade"]
+        target_step = int(result["target_step"])
+        target_salary = float(result["target_salary"])
+
+        r1, r2, r3 = st.columns(3)
+        with r1:
+            st.metric(t("gs_before"), f"{current_grade}-S{current_step}")
+        with r2:
+            st.metric(t("gs_after"), f"{target_grade}-S{target_step}")
+        with r3:
+            st.metric(t("final_salary"), format_money(final_salary))
+
+        st.subheader(t("promotion_flow"))
+        st.graphviz_chart(
+            promotion_diagram(current_grade, int(current_step), target_grade, target_step)
+        )
+
+        # 追加：数字つき説明文
+        if st.session_state.lang == "日本語":
+            explanation = (
+                f"{current_grade}-S{current_step} の給与は {format_money(current_salary)} です。"
+                f"AP は {format_money(ap_amount)}、PP は {format_money(pp_amount)} なので、"
+                f"昇格時の最低必要額は "
+                f"{format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} "
+                f"= {format_money(minimum_required)} です。"
+                f"そのため、{target_grade} の中でこの金額を下回らず、最も近い金額となるのは "
+                f"{target_grade}-S{target_step}（{format_money(target_salary)}）です。"
+            )
+        else:
+            explanation = (
+                f"The salary at {current_grade}-S{current_step} is {format_money(current_salary)}. "
+                f"AP is {format_money(ap_amount)} and PP is {format_money(pp_amount)}, so the minimum required amount is "
+                f"{format_money(current_salary)} + {format_money(ap_amount)} + {format_money(pp_amount)} "
+                f"= {format_money(minimum_required)}. "
+                f"Therefore, the closest step in {target_grade} that does not fall below this amount is "
+                f"{target_grade}-S{target_step} ({format_money(target_salary)})."
+            )
+
+        st.info(explanation)
+
+        # 追加：計算内訳を表でも表示
+        breakdown_df = pd.DataFrame([
+            {
+                lang_text("項目", "Item"): lang_text("現在給与", "Current Salary"),
+                lang_text("金額", "Amount"): current_salary,
+            },
+            {
+                lang_text("項目", "Item"): "AP",
+                lang_text("金額", "Amount"): ap_amount,
+            },
+            {
+                lang_text("項目", "Item"): "PP",
+                lang_text("金額", "Amount"): pp_amount,
+            },
+            {
+                lang_text("項目", "Item"): lang_text("最低必要額", "Minimum Required"),
+                lang_text("金額", "Amount"): minimum_required,
+            },
+            {
+                lang_text("項目", "Item"): lang_text("昇格後基本給", "Promoted Base Salary"),
+                lang_text("金額", "Amount"): target_salary,
+            },
+        ])
+        breakdown_display = breakdown_df.copy()
+        amount_col = lang_text("金額", "Amount")
+        breakdown_display[amount_col] = breakdown_display[amount_col].apply(format_money)
+        st.dataframe(breakdown_display, use_container_width=True, hide_index=True)
+
+        search_df = current_df[["Step", target_grade]].copy()
+        search_df["Eligible"] = search_df[target_grade] >= minimum_required
+        st.subheader(t("step_search_result"))
+        st.dataframe(search_df, use_container_width=True, hide_index=True)
 # =========================================================
 # Tab 5: Allowance export
 # =========================================================
