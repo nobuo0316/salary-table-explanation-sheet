@@ -42,6 +42,7 @@ NEXT_GRADE: Dict[str, str] = {
 DEFAULT_EMPLOYEE_COLUMNS = [
     "Employee ID",
     "Name",
+    "Area",
     "Grade",
     "Step",
     "University Graduate",
@@ -56,6 +57,22 @@ DEFAULT_PARAMS = {
     "G4": {"base": 32000.0, "ap": 800.0, "pp": 2800.0},
     "G3": {"base": 40000.0, "ap": 1000.0, "pp": 3500.0},
     "G2": {"base": 52000.0, "ap": 1200.0, "pp": 0.0},
+}
+
+AREAS: List[str] = ["Davao", "General Santos", "Tawi-Tawi", "Olutanga"]
+AREA_LABELS = {
+    "Davao": {"日本語": "ダバオ", "English": "Davao"},
+    "General Santos": {"日本語": "ゼネサン", "English": "General Santos"},
+    "Tawi-Tawi": {"日本語": "タウイタウイ", "English": "Tawi-Tawi"},
+    "Olutanga": {"日本語": "オルタンガ", "English": "Olutanga"},
+}
+WORK_DAYS_PER_YEAR = 313
+MONTHS_PER_YEAR = 12
+DEFAULT_AREA_MIN_WAGES = {
+    "Davao": 540.0,
+    "General Santos": 460.0,
+    "Tawi-Tawi": 386.0,
+    "Olutanga": 464.0,
 }
 
 LANGUAGE_PACK = {
@@ -377,6 +394,11 @@ def t(key: str) -> str:
 def grade_label(grade: str) -> str:
     return LANGUAGE_PACK[st.session_state.lang][f"glabel_{grade}"]
 
+def lang_text(ja: str, en: str) -> str:
+    return ja if st.session_state.lang == "日本語" else en
+
+def area_label(area: str) -> str:
+    return AREA_LABELS.get(area, {}).get(st.session_state.lang, area)
 
 def format_money(value: float) -> str:
     decimals = st.session_state.decimals
@@ -395,13 +417,36 @@ def login_enabled() -> bool:
     return get_supabase_config() is not None
 
 
-def build_wage_table(params: Dict[str, Dict[str, float]]) -> pd.DataFrame:
+def daily_to_monthly_base(min_wage: float) -> float:
+    return round(float(min_wage) * WORK_DAYS_PER_YEAR / MONTHS_PER_YEAR, 2)
+
+def get_grade_base_differentials(params: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+    g6_base = float(params["G6"]["base"])
+    return {g: float(params[g]["base"]) - g6_base for g in GRADES}
+
+def build_area_params(params: Dict[str, Dict[str, float]], area_min_wages: Dict[str, float], area: str) -> Dict[str, Dict[str, float]]:
+    differentials = get_grade_base_differentials(params)
+    g6_base = daily_to_monthly_base(float(area_min_wages[area]))
+    out: Dict[str, Dict[str, float]] = {}
+    for g in GRADES:
+        out[g] = {
+            "base": g6_base + differentials[g],
+            "ap": float(params[g]["ap"]),
+            "pp": float(params[g]["pp"]),
+        }
+    return out
+
+def build_wage_table(params: Dict[str, Dict[str, float]], area_min_wages: Dict[str, float], area: str) -> pd.DataFrame:
+    area_params = build_area_params(params, area_min_wages, area)
     data = {"Step": STEPS}
     for g in GRADES:
-        base = params[g]["base"]
-        ap = params[g]["ap"]
+        base = area_params[g]["base"]
+        ap = area_params[g]["ap"]
         data[g] = [base + (step - 1) * ap for step in STEPS]
     return pd.DataFrame(data)
+
+def build_all_area_wage_tables(params: Dict[str, Dict[str, float]], area_min_wages: Dict[str, float]) -> Dict[str, pd.DataFrame]:
+    return {area: build_wage_table(params, area_min_wages, area) for area in AREAS}
 
 
 def make_excel_file(df: pd.DataFrame) -> Optional[bytes]:
@@ -433,6 +478,7 @@ def build_employee_csv_template() -> pd.DataFrame:
         {
             "Employee ID": "E001",
             "Name": "Sample Employee",
+            "Area": "Davao",
             "Grade": "G5A",
             "Step": 4,
             "University Graduate": 1,
@@ -471,6 +517,10 @@ def validate_employee_roster_csv(df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"Columns must be exactly: {required_cols}")
 
     out = df.copy()
+    out["Area"] = out["Area"].astype(str).str.strip()
+    if not out["Area"].isin(AREAS).all():
+        raise ValueError(f"Area column contains invalid area. Allowed: {AREAS}")
+
     out["Grade"] = out["Grade"].astype(str)
     if not out["Grade"].isin(GRADES).all():
         raise ValueError("Grade column contains invalid grade")
@@ -589,6 +639,42 @@ def save_settings_to_supabase(params: Dict[str, Dict[str, float]]) -> None:
     except Exception as exc:
         raise RuntimeError(str(exc)) from exc
 
+
+def load_area_min_wages_from_supabase() -> Dict[str, float]:
+    config = get_supabase_config()
+    if config is None:
+        return DEFAULT_AREA_MIN_WAGES.copy()
+    table = "area_min_wages"
+    try:
+        result = supabase_request(
+            method="GET",
+            path=table,
+            query={"select": "area,min_wage", "order": "area.asc"},
+        )
+        if not result:
+            return DEFAULT_AREA_MIN_WAGES.copy()
+        out = DEFAULT_AREA_MIN_WAGES.copy()
+        for row in result:
+            area = str(row.get("area", "")).strip()
+            if area in out:
+                out[area] = float(row.get("min_wage", out[area]))
+        return out
+    except Exception:
+        return DEFAULT_AREA_MIN_WAGES.copy()
+
+def save_area_min_wages_to_supabase(area_min_wages: Dict[str, float]) -> None:
+    config = get_supabase_config()
+    if config is None:
+        return
+    table = "area_min_wages"
+    body = [{"area": area, "min_wage": float(area_min_wages[area])} for area in AREAS]
+    try:
+        supabase_request(method="POST", path=table, body=body, query={"on_conflict": "area"})
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(detail) from exc
+    except Exception as exc:
+        raise RuntimeError(str(exc)) from exc
 
 def get_login_users_from_supabase() -> List[Dict[str, object]]:
 
@@ -722,9 +808,15 @@ def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adj
     return out
 
 
-def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, university_allowance_amount: float) -> pd.DataFrame:
+def build_employee_payroll(
+    roster_df: pd.DataFrame,
+    area_wage_tables: Dict[str, pd.DataFrame],
+    university_allowance_amount: float,
+) -> pd.DataFrame:
     rows = []
     for _, row in roster_df.iterrows():
+        area = str(row["Area"]).strip()
+        wage_df = area_wage_tables[area]
         grade = str(row["Grade"])
         step = int(row["Step"])
         basic_pay = get_current_salary(wage_df, grade, step)
@@ -737,6 +829,7 @@ def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, unive
         rows.append({
             t("employee_id"): str(row["Employee ID"]),
             t("employee_name"): str(row["Name"]),
+            lang_text("エリア", "Area"): area_label(area),
             t("employee_grade"): grade,
             t("employee_step"): step,
             t("employee_basic_pay"): basic_pay,
@@ -749,6 +842,7 @@ def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, unive
             "_active": int(row["Active"]),
         })
     return pd.DataFrame(rows)
+
 def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for g in GRADES:
@@ -766,6 +860,33 @@ def display_table_with_gs(df: pd.DataFrame) -> pd.DataFrame:
         rows.append(record)
     return pd.DataFrame(rows)
 
+def current_area_wage_df() -> pd.DataFrame:
+    return build_wage_table(
+        st.session_state.params,
+        st.session_state.area_min_wages,
+        st.session_state.selected_area,
+    )
+
+def current_area_params() -> Dict[str, Dict[str, float]]:
+    return build_area_params(
+        st.session_state.params,
+        st.session_state.area_min_wages,
+        st.session_state.selected_area,
+    )
+
+def all_area_wage_tables() -> Dict[str, pd.DataFrame]:
+    return build_all_area_wage_tables(st.session_state.params, st.session_state.area_min_wages)
+
+def build_area_min_wage_table(area_min_wages: Dict[str, float]) -> pd.DataFrame:
+    return pd.DataFrame([
+        {
+            lang_text("エリア", "Area"): area_label(area),
+            "AreaKey": area,
+            lang_text("最低日給", "Daily Minimum Wage"): float(area_min_wages[area]),
+            lang_text("G6 Step1 月給", "G6 Step1 Monthly Base"): daily_to_monthly_base(area_min_wages[area]),
+        }
+        for area in AREAS
+    ])
 
 def grade_step_grid(selected_grade: str = "G5A", selected_step: int = 4) -> str:
     lines = []
@@ -827,10 +948,16 @@ def promotion_diagram(current_grade: str, current_step: int, next_grade: str, ta
     """
 
 
-def save_and_rebuild(params: Dict[str, Dict[str, float]]) -> None:
-    st.session_state.params = params
-    st.session_state.wage_df = build_wage_table(params)
-    save_settings_to_supabase(params)
+def save_and_rebuild(
+    params: Optional[Dict[str, Dict[str, float]]] = None,
+    area_min_wages: Optional[Dict[str, float]] = None,
+) -> None:
+    if params is not None:
+        st.session_state.params = params
+        save_settings_to_supabase(params)
+    if area_min_wages is not None:
+        st.session_state.area_min_wages = area_min_wages
+        save_area_min_wages_to_supabase(area_min_wages)
 
 
 # =========================================================
@@ -852,8 +979,10 @@ if "user_role" not in st.session_state:
     st.session_state.user_role = "viewer"
 if "params" not in st.session_state:
     st.session_state.params = load_settings_from_supabase()
-if "wage_df" not in st.session_state:
-    st.session_state.wage_df = build_wage_table(st.session_state.params)
+if "area_min_wages" not in st.session_state:
+    st.session_state.area_min_wages = load_area_min_wages_from_supabase()
+if "selected_area" not in st.session_state:
+    st.session_state.selected_area = "Davao"
 if "employee_roster_df" not in st.session_state:
     st.session_state.employee_roster_df = pd.DataFrame(columns=DEFAULT_EMPLOYEE_COLUMNS)
 
@@ -938,6 +1067,12 @@ st.session_state.lang = st.sidebar.radio(
 )
 st.session_state.currency_symbol = st.sidebar.text_input(t("sidebar_currency"), value=st.session_state.currency_symbol)
 st.session_state.decimals = st.sidebar.selectbox(t("sidebar_decimals"), [0, 1, 2], index=[0, 1, 2].index(st.session_state.decimals))
+st.session_state.selected_area = st.sidebar.selectbox(
+    lang_text("表示エリア", "Selected Area"),
+    AREAS,
+    index=AREAS.index(st.session_state.selected_area) if st.session_state.selected_area in AREAS else 0,
+    format_func=area_label,
+)
 
 if login_enabled() and st.session_state.logged_in:
     role_label = st.session_state.user_role or "viewer"
@@ -956,12 +1091,15 @@ if get_supabase_config() is not None:
 else:
     st.sidebar.info(t("supabase_status_off"))
 
+selected_daily = st.session_state.area_min_wages.get(st.session_state.selected_area, 0.0)
+st.sidebar.caption(f"{lang_text('選択エリア最低日給', 'Selected area daily minimum wage')}: {format_money(selected_daily)}")
+st.sidebar.caption(f"{lang_text('G6-S1 月給', 'G6-S1 monthly base')}: {format_money(daily_to_monthly_base(selected_daily))}")
 st.sidebar.caption(f"{t('currency_preview')}: {format_money(12345.67)}")
 st.sidebar.markdown("---")
 st.sidebar.write(t("sidebar_example"))
 example_grade = st.sidebar.selectbox("Grade", GRADES, index=2, key="example_grade")
 example_step = st.sidebar.selectbox("Step", STEPS, index=3, key="example_step")
-st.sidebar.info(f"GS = {example_grade}-S{example_step}")
+st.sidebar.info(f"{lang_text('エリア', 'Area')} = {area_label(st.session_state.selected_area)} / GS = {example_grade}-S{example_step}")
 
 # =========================================================
 # Main header
@@ -974,7 +1112,7 @@ with m1:
 with m2:
     st.metric("Steps", len(STEPS))
 with m3:
-    st.metric("GS Patterns", len(GRADES) * len(STEPS))
+    st.metric(lang_text("エリア数", "Areas"), len(AREAS))
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     t("tab_overview"),
@@ -994,11 +1132,17 @@ with tab1:
     st.write(t("overview_text1"))
     st.write(t("overview_text2"))
     st.write(t("grade_axis"))
-    st.subheader(t("rule_heading"))
-    st.markdown(f"- {t('rule_ap')}")
-    st.markdown(f"- {t('rule_pp')}")
-    st.markdown(f"- {t('rule_allow')}")
-    st.info(t("rule_promo"))
+    st.info(lang_text(
+        "各エリアの G6-S1 は『最低日給 × 313日 ÷ 12か月』で自動計算します。AP と PP は全エリア共通です。",
+        "For each area, G6-S1 is calculated automatically as Daily Minimum Wage × 313 days ÷ 12 months. AP and PP are shared across all areas.",
+    ))
+
+    area_summary_df = build_area_min_wage_table(st.session_state.area_min_wages).drop(columns=["AreaKey"])
+    display_area_summary_df = area_summary_df.copy()
+    for col in display_area_summary_df.columns[1:]:
+        display_area_summary_df[col] = display_area_summary_df[col].apply(format_money)
+    st.subheader(lang_text("エリア別最低賃金一覧", "Area Minimum Wage Summary"))
+    st.dataframe(display_area_summary_df, use_container_width=True, hide_index=True)
 
     ref_df = pd.DataFrame({
         t("grade"): GRADES,
@@ -1010,61 +1154,14 @@ with tab1:
 
     st.subheader(t("ap_pp_heading"))
     ap_pp_df = pd.DataFrame([
-        {t("grade"): g, t("ap_label"): format_money(st.session_state.params[g]["ap"]), t("pp_label"): format_money(st.session_state.params[g]["pp"])}
+        {
+            t("grade"): g,
+            t("ap_label"): format_money(st.session_state.params[g]["ap"]),
+            t("pp_label"): format_money(st.session_state.params[g]["pp"]),
+        }
         for g in GRADES
     ])
     st.dataframe(ap_pp_df, use_container_width=True, hide_index=True)
-
-    st.subheader(t("case_study_heading"))
-    with st.container(border=True):
-        st.markdown(f"**{t('case_new_grad_title')}**")
-        st.write(t("case_new_grad_text"))
-    with st.container(border=True):
-        st.markdown(f"**{t('case_mid_title')}**")
-        st.write(t("case_mid_text"))
-    st.caption(t("case_note"))
-
-    st.subheader(t("career_25_heading"))
-    with st.container(border=True):
-        st.markdown(f"**{t('career_newgrad_title')}**")
-        st.write(t("career_newgrad_text"))
-    with st.container(border=True):
-        st.markdown(f"**{t('career_mid_title')}**")
-        st.write(t("career_mid_text"))
-    st.info(t("career_note"))
-
-    st.subheader(t("career_diagram_heading"))
-    if st.session_state.lang == "日本語":
-        label_start = "入社"
-        label_5 = "5年"
-        label_10 = "10年"
-        label_15 = "15年"
-        label_20 = "20年"
-        label_25 = "25年"
-        label_promo = "昇格"
-    else:
-        label_start = "Start"
-        label_5 = "Year 5"
-        label_10 = "Year 10"
-        label_15 = "Year 15"
-        label_20 = "Year 20"
-        label_25 = "Year 25"
-        label_promo = "Promotion"
-
-    st.graphviz_chart(f"""
-    digraph G {{
-        rankdir=LR;
-        node [shape="box", style="rounded,filled", fillcolor="white"];
-        N1 [label="G6-S1\\n{label_start}"];
-        N2 [label="G6-S5\\n{label_5}"];
-        N3 [label="G5B\\n{label_promo}"];
-        N4 [label="G5A\\n{label_10}"];
-        N5 [label="G4\\n{label_15}"];
-        N6 [label="G3\\n{label_20}"];
-        N7 [label="G2\\n{label_25}", fillcolor="lightgreen"];
-        N1 -> N2 -> N3 -> N4 -> N5 -> N6 -> N7;
-    }}
-    """)
 
 # =========================================================
 # Tab 2: Diagrams
@@ -1073,47 +1170,53 @@ with tab2:
     st.subheader(t("diagram_heading1"))
     st.write(t("diagram_help1"))
     st.graphviz_chart(grade_step_grid(example_grade, min(example_step, 5)))
+
     st.subheader(t("diagram_heading2"))
     st.write(t("diagram_help2"))
     st.graphviz_chart(raise_diagram())
+
     st.subheader(t("diagram_heading3"))
     st.write(t("diagram_help3"))
-    sample_result = find_promotion_result(st.session_state.wage_df, st.session_state.params, "G5A", 4)
+    sample_df = current_area_wage_df()
+    sample_params = current_area_params()
+    sample_result = find_promotion_result(sample_df, sample_params, "G5A", 4)
     if sample_result:
         st.graphviz_chart(promotion_diagram("G5A", 4, sample_result["target_grade"], int(sample_result["target_step"])))
-    st.info(t("simple_example_text"))
+    st.info(f"{lang_text('現在の表示エリア', 'Current selected area')}: {area_label(st.session_state.selected_area)}")
 
 # =========================================================
 # Tab 3: Wage table
 # =========================================================
 with tab3:
     st.subheader(t("wage_heading"))
-    st.caption(t("wage_caption"))
-    edited_df = st.data_editor(
-        st.session_state.wage_df,
-        use_container_width=True,
-        num_rows="fixed",
-        hide_index=True,
-        column_config={
-            "Step": st.column_config.NumberColumn("Step", disabled=True),
-            **{g: st.column_config.NumberColumn(g, format="%.2f") for g in GRADES},
-        },
-        key="wage_table_editor",
-    )
-    st.session_state.wage_df = edited_df
+    st.caption(f"{t('wage_caption')} / {lang_text('表示エリア', 'Area')}: {area_label(st.session_state.selected_area)}")
+    current_df = current_area_wage_df()
     view_mode = st.radio(t("table_view_mode"), [t("table_mode_raw"), t("table_mode_with_label")], horizontal=True)
     if view_mode == t("table_mode_raw"):
-        st.dataframe(display_table_with_formats(st.session_state.wage_df), use_container_width=True, hide_index=True)
+        st.dataframe(display_table_with_formats(current_df), use_container_width=True, hide_index=True)
     else:
-        st.dataframe(display_table_with_gs(st.session_state.wage_df), use_container_width=True, hide_index=True)
-    csv_bytes = st.session_state.wage_df.to_csv(index=False).encode("utf-8-sig")
-    excel_bytes = make_excel_file(st.session_state.wage_df)
+        st.dataframe(display_table_with_gs(current_df), use_container_width=True, hide_index=True)
+
+    csv_bytes = current_df.to_csv(index=False).encode("utf-8-sig")
+    excel_bytes = make_excel_file(current_df)
     d1, d2 = st.columns(2)
     with d1:
-        st.download_button(t("download_csv"), data=csv_bytes, file_name="wage_table.csv", mime="text/csv", use_container_width=True)
+        st.download_button(
+            t("download_csv"),
+            data=csv_bytes,
+            file_name=f"wage_table_{st.session_state.selected_area.lower().replace(' ', '_')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
     with d2:
         if excel_bytes is not None:
-            st.download_button(t("download_excel"), data=excel_bytes, file_name="wage_table.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            st.download_button(
+                t("download_excel"),
+                data=excel_bytes,
+                file_name=f"wage_table_{st.session_state.selected_area.lower().replace(' ', '_')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
         else:
             st.info(t("excel_unavailable"))
     st.caption(t("download_note"))
@@ -1123,6 +1226,9 @@ with tab3:
 # =========================================================
 with tab4:
     st.subheader(t("sim_heading"))
+    st.caption(f"{lang_text('計算対象エリア', 'Area used for calculation')}: {area_label(st.session_state.selected_area)}")
+    current_df = current_area_wage_df()
+    current_params = current_area_params()
     c1, c2, c3 = st.columns(3)
     with c1:
         current_grade = st.selectbox(t("current_grade"), GRADES[:-1], index=0)
@@ -1138,7 +1244,7 @@ with tab4:
     with a3:
         other_allowance = st.number_input(t("other_allowance"), min_value=0.0, value=0.0, step=100.0)
     if st.button(t("simulate"), use_container_width=True, key="simulate_current"):
-        result = find_promotion_result(st.session_state.wage_df, st.session_state.params, current_grade, int(current_step))
+        result = find_promotion_result(current_df, current_params, current_grade, int(current_step))
         if result is None:
             st.warning(t("no_next_grade"))
         else:
@@ -1153,7 +1259,7 @@ with tab4:
                 st.metric(t("final_salary"), format_money(final_salary))
             st.subheader(t("promotion_flow"))
             st.graphviz_chart(promotion_diagram(current_grade, int(current_step), result["target_grade"], int(result["target_step"])))
-            search_df = st.session_state.wage_df[["Step", result["target_grade"]]].copy()
+            search_df = current_df[["Step", result["target_grade"]]].copy()
             search_df["Eligible"] = search_df[result["target_grade"]] >= result["minimum_required"]
             st.subheader(t("step_search_result"))
             st.dataframe(search_df, use_container_width=True, hide_index=True)
@@ -1161,9 +1267,10 @@ with tab4:
 # =========================================================
 # Tab 5: Allowance export
 # =========================================================
-with tab6:
+with tab5:
     st.subheader(t("allowance_export_heading"))
-    st.write(t("allowance_export_text"))
+    st.write(f"{t('allowance_export_text')} ({area_label(st.session_state.selected_area)})")
+    current_df = current_area_wage_df()
     ex1, ex2, ex3 = st.columns(3)
     with ex1:
         include_adjustment = st.checkbox(t("include_adjustment_allowance"), value=True)
@@ -1174,16 +1281,16 @@ with tab6:
     with ex3:
         include_other = st.checkbox(t("include_other_allowance"), value=False)
         other_amount = st.number_input(t("other_allowance_export"), min_value=0.0, value=0.0, step=100.0)
-    allowance_export_df = build_allowance_export_table(st.session_state.wage_df, include_adjustment, adjustment_amount, include_university, university_amount, include_other, other_amount)
+    allowance_export_df = build_allowance_export_table(current_df, include_adjustment, adjustment_amount, include_university, university_amount, include_other, other_amount)
     st.dataframe(allowance_export_df, use_container_width=True, hide_index=True)
     allowance_csv = allowance_export_df.to_csv(index=False).encode("utf-8-sig")
     allowance_excel = make_excel_file(allowance_export_df)
     exd1, exd2 = st.columns(2)
     with exd1:
-        st.download_button(t("export_with_allowances_csv"), data=allowance_csv, file_name="wage_table_with_allowances.csv", mime="text/csv", use_container_width=True)
+        st.download_button(t("export_with_allowances_csv"), data=allowance_csv, file_name=f"wage_table_with_allowances_{st.session_state.selected_area.lower().replace(' ', '_')}.csv", mime="text/csv", use_container_width=True)
     with exd2:
         if allowance_excel is not None:
-            st.download_button(t("export_with_allowances_excel"), data=allowance_excel, file_name="wage_table_with_allowances.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            st.download_button(t("export_with_allowances_excel"), data=allowance_excel, file_name=f"wage_table_with_allowances_{st.session_state.selected_area.lower().replace(' ', '_')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         else:
             st.info(t("excel_unavailable"))
 
@@ -1192,7 +1299,7 @@ with tab6:
 # =========================================================
 with tab6:
     st.subheader(t("employee_heading"))
-    st.markdown(f"<div class='info-card'>{t('employee_text')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='info-card'>{t('employee_text')} {lang_text('エリア列を含めると、そのエリアの賃金テーブルが自動適用されます。', 'If the roster includes an Area column, the matching area wage table is applied automatically.')}</div>", unsafe_allow_html=True)
     template_emp_csv = build_employee_csv_template().to_csv(index=False).encode("utf-8-sig")
     st.download_button(t("employee_template_download"), data=template_emp_csv, file_name="employee_roster_template.csv", mime="text/csv")
 
@@ -1228,7 +1335,7 @@ with tab6:
         roster_university_allowance = st.number_input(t("default_university_allowance"), min_value=0.0, value=0.0, step=100.0)
         payroll_df = build_employee_payroll(
             st.session_state.employee_roster_df,
-            st.session_state.wage_df,
+            all_area_wage_tables(),
             university_allowance_amount=roster_university_allowance,
         )
         if active_only:
@@ -1271,15 +1378,21 @@ with tab7:
     st.markdown(f"<div class='warn-card'>{t('warning_rebuild')}</div>", unsafe_allow_html=True)
 
     if st.session_state.lang == "日本語":
-        st.info("表形式で Base / AP / PP をまとめて確認できます。管理者は編集・再生成、Viewer は閲覧のみです。")
-        st.caption("AP・PP もこの表で直接変更できます。変更後に『再生成』を押すと賃金テーブルへ反映されます。")
+        st.info("Base / AP / PP は全エリア共通です。G6-S1 は各エリアの最低日給から自動計算されます。")
+        st.caption("他グレードの Step1 は、G6 との差額を維持したままエリアごとに自動でスライドします。")
         grade_col_label = "グレード"
         position_col_label = "役職"
+        area_col_label = "エリア"
+        min_wage_label = "最低日給"
+        g6_monthly_label = "G6 Step1 月給"
     else:
-        st.info("You can review Base / AP / PP in a spreadsheet-style grid. Admins can edit and rebuild, while viewers can only view.")
-        st.caption("AP and PP can also be updated directly in this grid. Click Rebuild after editing to apply the changes to the wage table.")
+        st.info("Base / AP / PP are shared across all areas. G6-S1 is calculated automatically from each area's daily minimum wage.")
+        st.caption("Step1 for other grades shifts by area while keeping the same grade-to-grade gap from G6.")
         grade_col_label = "Grade"
         position_col_label = "Position"
+        area_col_label = "Area"
+        min_wage_label = "Daily Minimum Wage"
+        g6_monthly_label = "G6 Step1 Monthly Base"
 
     settings_editor_df = pd.DataFrame([
         {
@@ -1308,6 +1421,33 @@ with tab7:
         key="admin_settings_grid",
     )
 
+    area_wage_editor_df = pd.DataFrame([
+        {
+            area_col_label: area_label(area),
+            "AreaKey": area,
+            min_wage_label: float(st.session_state.area_min_wages[area]),
+            g6_monthly_label: daily_to_monthly_base(st.session_state.area_min_wages[area]),
+        }
+        for area in AREAS
+    ])
+
+    st.markdown("---")
+    st.subheader(lang_text("エリア別最低賃金設定", "Area Minimum Wage Settings"))
+    edited_area_wage_df = st.data_editor(
+        area_wage_editor_df,
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        disabled=["AreaKey", area_col_label, g6_monthly_label] if is_admin() else True,
+        column_config={
+            area_col_label: st.column_config.TextColumn(width="medium"),
+            "AreaKey": st.column_config.TextColumn(width="small"),
+            min_wage_label: st.column_config.NumberColumn(min_value=0.0, step=1.0, format="%.2f"),
+            g6_monthly_label: st.column_config.NumberColumn(disabled=True, format="%.2f"),
+        },
+        key="admin_area_wages_grid",
+    )
+
     if is_admin():
         tmp_params = {}
         for _, row in edited_settings_df.iterrows():
@@ -1318,11 +1458,16 @@ with tab7:
                 "pp": float(row[t("pp")]),
             }
 
-        b1, b2 = st.columns(2)
+        tmp_area_wages = {}
+        for _, row in edited_area_wage_df.iterrows():
+            area = str(row["AreaKey"]).strip()
+            tmp_area_wages[area] = float(row[min_wage_label])
+
+        b1, b2, b3 = st.columns(3)
         with b1:
             if st.button(t("rebuild"), use_container_width=True):
                 try:
-                    save_and_rebuild(tmp_params)
+                    save_and_rebuild(tmp_params, tmp_area_wages)
                     st.success(t("success_rebuild"))
                     st.rerun()
                 except Exception as e:
@@ -1331,11 +1476,14 @@ with tab7:
             if st.button(t("reset"), use_container_width=True):
                 try:
                     reset_params = {k: v.copy() for k, v in DEFAULT_PARAMS.items()}
-                    save_and_rebuild(reset_params)
+                    reset_area_wages = DEFAULT_AREA_MIN_WAGES.copy()
+                    save_and_rebuild(reset_params, reset_area_wages)
                     st.success(t("success_reset"))
                     st.rerun()
                 except Exception as e:
                     st.error(f"{t('supabase_save_error')}\n\nDetail: {str(e)}")
+        with b3:
+            st.metric(lang_text("現在の選択エリア", "Current selected area"), area_label(st.session_state.selected_area))
 
         st.markdown("---")
         st.subheader(t("csv_import_heading"))
@@ -1360,13 +1508,13 @@ with tab7:
                     uploaded_csv.seek(0)
                     imported_df = pd.read_csv(uploaded_csv)
                     new_params = validate_imported_settings_csv(imported_df)
-                    save_and_rebuild(new_params)
+                    save_and_rebuild(new_params, tmp_area_wages)
                     st.success(t("csv_import_success"))
                     st.rerun()
                 except Exception as e:
                     st.error(f"{t('csv_import_error')}\n\nDetail: {str(e)}")
     else:
-        st.info("Viewer mode: settings can be viewed here, but only admins can rebuild tables or import CSV files.")
+        st.info("Viewer mode: settings can be viewed here, but only admins can save changes.")
 
 st.markdown("---")
-st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
+st.caption("Created for bilingual wage table explanation, visual guidance, promotion simulation, area-based wage tables, employee roster import/export, CSV import, and Supabase persistence in Streamlit.")
