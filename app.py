@@ -706,6 +706,8 @@ def normalize_role(role_value: object) -> str:
 
 def is_user_active(user: Dict[str, object]) -> bool:
     value = user.get("is_active", True)
+    if value is None:
+        return True
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("true", "1", "yes", "y")
