@@ -73,7 +73,6 @@ LANGUAGE_PACK = {
         "tab_diagram": "図で理解",
         "tab_table": "賃金テーブル",
         "tab_sim": "昇格シミュレーション",
-        "tab_next_year": "来年昇格シミュレーション",
         "tab_allowance_export": "手当込みエクスポート",
         "tab_employee": "従業員名簿",
         "tab_admin": "管理設定",
@@ -149,11 +148,6 @@ LANGUAGE_PACK = {
         "gs_after": "昇格後GS",
         "promotion_flow": "昇格の流れ",
         "step_search_result": "該当Stepの探索結果",
-        "next_year_heading": "来年昇格シミュレーション",
-        "apply_next_step": "昇格前に来年の Step アップを反映する",
-        "next_year_current_step": "来年時点の現在ステップ",
-        "next_year_current_salary": "来年時点の現在給与",
-        "next_year_result": "来年昇格後の GS",
         "allowance_export_heading": "手当込み賃金テーブル",
         "allowance_export_text": "固定額の手当を加えた賃金テーブルを表示・エクスポートできます。",
         "adjustment_allowance_export": "調整手当（固定額）",
@@ -165,7 +159,7 @@ LANGUAGE_PACK = {
         "export_with_allowances_csv": "手当込みCSVをダウンロード",
         "export_with_allowances_excel": "手当込みExcelをダウンロード",
         "employee_heading": "従業員名簿",
-        "employee_text": "従業員名簿を CSV で読み込み、各従業員の基本給、手当、合計支給額、来年昇格後 GS を一覧化できます。",
+        "employee_text": "従業員名簿を CSV で読み込み、各従業員の基本給、手当、合計支給額を一覧化できます。",
         "employee_template_download": "従業員名簿テンプレートをダウンロード",
         "employee_upload": "従業員名簿CSVをアップロード",
         "employee_apply": "従業員名簿を反映",
@@ -186,8 +180,6 @@ LANGUAGE_PACK = {
         "employee_university_allowance": "大卒手当",
         "employee_total_allowance": "手当合計",
         "employee_total_pay": "合計支給額",
-        "employee_next_year_gs": "来年昇格後GS",
-        "employee_next_year_basic_pay": "来年昇格後基本給",
         "active_only": "在籍者のみ表示",
         "default_university_allowance": "名簿計算用の大卒手当（固定額）",
         "admin_heading": "管理設定",
@@ -235,7 +227,6 @@ LANGUAGE_PACK = {
         "tab_diagram": "Visual Guide",
         "tab_table": "Wage Table",
         "tab_sim": "Promotion Simulation",
-        "tab_next_year": "Next-Year Promotion",
         "tab_allowance_export": "Allowance Export",
         "tab_employee": "Employee Roster",
         "tab_admin": "Admin Settings",
@@ -311,11 +302,6 @@ LANGUAGE_PACK = {
         "gs_after": "New GS",
         "promotion_flow": "Promotion Flow",
         "step_search_result": "Step Search Result",
-        "next_year_heading": "Next-Year Promotion Simulation",
-        "apply_next_step": "Apply next year's step-up before promotion",
-        "next_year_current_step": "Next-year current step",
-        "next_year_current_salary": "Next-year current salary",
-        "next_year_result": "Next-year promoted GS",
         "allowance_export_heading": "Allowance-Included Wage Table",
         "allowance_export_text": "You can view and export a wage table with fixed allowances added.",
         "adjustment_allowance_export": "Adjustment allowance (fixed)",
@@ -327,7 +313,7 @@ LANGUAGE_PACK = {
         "export_with_allowances_csv": "Download allowance CSV",
         "export_with_allowances_excel": "Download allowance Excel",
         "employee_heading": "Employee Roster",
-        "employee_text": "Import an employee roster CSV and calculate base pay, allowances, total pay, and next-year promoted GS for each employee.",
+        "employee_text": "Import an employee roster CSV and calculate base pay, allowances, and total pay for each employee.",
         "employee_template_download": "Download employee roster template",
         "employee_upload": "Upload employee roster CSV",
         "employee_apply": "Apply employee roster",
@@ -348,8 +334,6 @@ LANGUAGE_PACK = {
         "employee_university_allowance": "University Allowance",
         "employee_total_allowance": "Allowance Total",
         "employee_total_pay": "Total Pay",
-        "employee_next_year_gs": "Next-Year Promoted GS",
-        "employee_next_year_basic_pay": "Next-Year Promoted Base Pay",
         "active_only": "Show active employees only",
         "default_university_allowance": "Fixed university allowance for roster calculation",
         "admin_heading": "Admin Settings",
@@ -611,7 +595,7 @@ def get_login_users_from_supabase() -> List[Dict[str, object]]:
 
     config = get_supabase_config()
     if config is None:
-        return [fallback_admin]
+        return []
     try:
         result = supabase_request(
             method="GET",
@@ -620,10 +604,10 @@ def get_login_users_from_supabase() -> List[Dict[str, object]]:
         )
         if isinstance(result, list):
             return result if isinstance(result, list) else []
-        return [fallback_admin]
+        return []
         
     except Exception:
-        return [fallback_admin]
+        return []
 
 
 def _candidate_login_values(user: Dict[str, object]) -> List[str]:
@@ -721,21 +705,6 @@ def find_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]],
     }
 
 
-def find_next_year_promotion_result(df: pd.DataFrame, params: Dict[str, Dict[str, float]], current_grade: str, current_step: int, apply_next_step: bool = True) -> Optional[Dict[str, float]]:
-    simulated_step = min(current_step + 1, max(STEPS)) if apply_next_step else current_step
-    base_result = find_promotion_result(df, params, current_grade, simulated_step)
-    if base_result is None:
-        return None
-    return {
-        "next_year_current_step": simulated_step,
-        "next_year_current_salary": base_result["current_salary"],
-        "minimum_required": base_result["minimum_required"],
-        "target_grade": base_result["target_grade"],
-        "target_step": base_result["target_step"],
-        "target_salary": base_result["target_salary"],
-    }
-
-
 def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adjustment_amount: float, include_university: bool, university_amount: float, include_other: bool, other_amount: float) -> pd.DataFrame:
     out = df.copy()
     allowance_total = 0.0
@@ -753,7 +722,7 @@ def build_allowance_export_table(df: pd.DataFrame, include_adjustment: bool, adj
     return out
 
 
-def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, params: Dict[str, Dict[str, float]], university_allowance_amount: float, apply_next_step: bool = True) -> pd.DataFrame:
+def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, university_allowance_amount: float) -> pd.DataFrame:
     rows = []
     for _, row in roster_df.iterrows():
         grade = str(row["Grade"])
@@ -765,12 +734,6 @@ def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, param
         university_allowance = float(university_allowance_amount if university_flag == 1 else 0.0)
         total_allowance = adjustment_allowance + other_allowance + university_allowance
         total_pay = basic_pay + total_allowance
-        next_year = find_next_year_promotion_result(wage_df, params, grade, step, apply_next_step=apply_next_step)
-        next_year_gs = "-"
-        next_year_basic = None
-        if next_year is not None:
-            next_year_gs = f"{next_year['target_grade']}-S{next_year['target_step']}"
-            next_year_basic = float(next_year["target_salary"])
         rows.append({
             t("employee_id"): str(row["Employee ID"]),
             t("employee_name"): str(row["Name"]),
@@ -783,13 +746,9 @@ def build_employee_payroll(roster_df: pd.DataFrame, wage_df: pd.DataFrame, param
             t("employee_university_allowance"): university_allowance,
             t("employee_total_allowance"): total_allowance,
             t("employee_total_pay"): total_pay,
-            t("employee_next_year_gs"): next_year_gs,
-            t("employee_next_year_basic_pay"): next_year_basic,
             "_active": int(row["Active"]),
         })
     return pd.DataFrame(rows)
-
-
 def display_table_with_formats(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for g in GRADES:
@@ -1017,12 +976,11 @@ with m2:
 with m3:
     st.metric("GS Patterns", len(GRADES) * len(STEPS))
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     t("tab_overview"),
     t("tab_diagram"),
     t("tab_table"),
     t("tab_sim"),
-    t("tab_next_year"),
     t("tab_allowance_export"),
     t("tab_employee"),
     t("tab_admin"),
@@ -1201,33 +1159,7 @@ with tab4:
             st.dataframe(search_df, use_container_width=True, hide_index=True)
 
 # =========================================================
-# Tab 5: Next year simulation
-# =========================================================
-with tab5:
-    st.subheader(t("next_year_heading"))
-    ny1, ny2, ny3 = st.columns(3)
-    with ny1:
-        next_year_grade = st.selectbox(t("current_grade"), GRADES[:-1], index=0, key="next_year_grade")
-    with ny2:
-        next_year_step = st.selectbox(t("current_step"), STEPS, index=0, key="next_year_step")
-    with ny3:
-        apply_next_step_flag = st.checkbox(t("apply_next_step"), value=True)
-    if st.button(t("simulate"), use_container_width=True, key="simulate_next_year"):
-        next_year_result = find_next_year_promotion_result(st.session_state.wage_df, st.session_state.params, next_year_grade, int(next_year_step), apply_next_step=apply_next_step_flag)
-        if next_year_result is None:
-            st.warning(t("no_next_grade"))
-        else:
-            nyr1, nyr2, nyr3 = st.columns(3)
-            with nyr1:
-                st.metric(t("next_year_current_step"), f"S{next_year_result['next_year_current_step']}")
-            with nyr2:
-                st.metric(t("next_year_current_salary"), format_money(next_year_result["next_year_current_salary"]))
-            with nyr3:
-                st.metric(t("next_year_result"), f"{next_year_result['target_grade']}-S{next_year_result['target_step']}")
-            st.graphviz_chart(promotion_diagram(next_year_grade, int(next_year_result["next_year_current_step"]), next_year_result["target_grade"], int(next_year_result["target_step"])))
-
-# =========================================================
-# Tab 6: Allowance export
+# Tab 5: Allowance export
 # =========================================================
 with tab6:
     st.subheader(t("allowance_export_heading"))
@@ -1256,9 +1188,9 @@ with tab6:
             st.info(t("excel_unavailable"))
 
 # =========================================================
-# Tab 7: Employee roster
+# Tab 6: Employee roster
 # =========================================================
-with tab7:
+with tab6:
     st.subheader(t("employee_heading"))
     st.markdown(f"<div class='info-card'>{t('employee_text')}</div>", unsafe_allow_html=True)
     template_emp_csv = build_employee_csv_template().to_csv(index=False).encode("utf-8-sig")
@@ -1294,13 +1226,10 @@ with tab7:
     if not st.session_state.employee_roster_df.empty and is_admin():
         active_only = st.checkbox(t("active_only"), value=True)
         roster_university_allowance = st.number_input(t("default_university_allowance"), min_value=0.0, value=0.0, step=100.0)
-        roster_apply_next_step = st.checkbox(t("apply_next_step"), value=True, key="roster_apply_next_step")
         payroll_df = build_employee_payroll(
             st.session_state.employee_roster_df,
             st.session_state.wage_df,
-            st.session_state.params,
             university_allowance_amount=roster_university_allowance,
-            apply_next_step=roster_apply_next_step,
         )
         if active_only:
             active_mask = st.session_state.employee_roster_df["Active"].astype(int).tolist()
@@ -1313,7 +1242,6 @@ with tab7:
             t("employee_university_allowance"),
             t("employee_total_allowance"),
             t("employee_total_pay"),
-            t("employee_next_year_basic_pay"),
         ]
         for col in money_cols:
             if col in display_payroll_df.columns:
@@ -1335,9 +1263,9 @@ with tab7:
         st.info("Employee CSV data is hidden for viewers. Only admins can upload, view, and export employee-level data.")
 
 # =========================================================
-# Tab 8: Admin
+# Tab 7: Admin
 # =========================================================
-with tab8:
+with tab7:
     st.subheader(t("admin_heading"))
     st.markdown(f"<div class='info-card'>{t('admin_text')}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='warn-card'>{t('warning_rebuild')}</div>", unsafe_allow_html=True)
